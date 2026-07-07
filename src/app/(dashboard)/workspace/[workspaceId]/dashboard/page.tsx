@@ -9,7 +9,7 @@ import {
   Zap,
 } from 'lucide-react'
 import Link from 'next/link'
-import { format, formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow } from 'date-fns'
 import { createClient } from '@supabase/supabase-js'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -28,6 +28,28 @@ const PIPELINE_STAGES = [
 
 function getInitials(name: string) {
   return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+}
+
+function getVariedGreeting(hour: number): string {
+  // Different greetings for different times of day, rotating randomly
+  const morningGreetings = ['Good morning', 'Rise and shine', 'Happy morning', 'Top of the morning']
+  const afternoonGreetings = ['Good afternoon', 'Afternoon', 'Keep up the momentum', 'Productive afternoon']
+  const eveningGreetings = ['Good evening', 'Evening', 'Winding down', 'Good to see you']
+
+  let greetings: string[]
+  if (hour < 12) {
+    greetings = morningGreetings
+  } else if (hour < 17) {
+    greetings = afternoonGreetings
+  } else {
+    greetings = eveningGreetings
+  }
+
+  // Use date as seed for consistent greeting throughout the day
+  const today = new Date()
+  const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate()
+  const index = seed % greetings.length
+  return greetings[index]
 }
 
 function getAdminSupabase() {
@@ -103,7 +125,9 @@ export default async function DashboardPage({ params }: PageProps) {
   const aiRate = (outboundToday ?? 0) > 0 ? Math.round(((aiMsgToday ?? 0) / (outboundToday ?? 1)) * 100) : 0
 
   const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const greeting = getVariedGreeting(hour)
+  const today = new Date()
+  const dateStr = `${today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`
 
   return (
     <div className="p-6 max-w-7xl">
@@ -113,7 +137,7 @@ export default async function DashboardPage({ params }: PageProps) {
           {greeting}, Admin 👋
         </h1>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          {format(new Date(), 'EEEE, MMMM d, yyyy')}
+          {dateStr}
         </p>
       </div>
 
