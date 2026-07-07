@@ -96,7 +96,7 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
   const [showMobileChat, setShowMobileChat] = useState(!!initialConversationId)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesScrollRef = useRef<HTMLDivElement>(null)
 
   // ── Fetch conversations from Supabase ──────────────────────────────────────
   const fetchConversations = useCallback(async () => {
@@ -165,6 +165,7 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
       .from('messages')
       .select('*')
       .eq('conversation_id', convId)
+      .order('timestamp', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true })
       .limit(200)
 
@@ -210,8 +211,11 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
   }, [selectedConvId, fetchMessages])
 
   // ── Scroll to bottom on new messages ──────────────────────────────────────
+  // Scroll ONLY the messages container (never the page) — scrollIntoView was
+  // scrolling the whole document and cutting off the chat list & header.
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const el = messagesScrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
   }, [messages])
 
   // ── Supabase Realtime — conversations ─────────────────────────────────────
@@ -267,14 +271,15 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
             status: row.status ?? 'sent',
             is_deleted: false,
             metadata: row.metadata ?? {},
-            sent_at: row.created_at,
+            sent_at: row.timestamp ?? row.created_at,
             created_at: row.created_at,
           }
           setMessages((prev) => {
             // Avoid duplicates
             if (prev.some((m) => m.id === newMsg.id)) return prev
-            // Sort by created_at to maintain correct order
-            return [...prev, newMsg].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+            // Sort by actual message time (WhatsApp timestamp) so user messages
+            // always appear before the AI reply, even if rows were inserted out of order
+            return [...prev, newMsg].sort((a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime())
           })
         }
       )
@@ -665,7 +670,7 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
           )}
 
           {/* Messages Area */}
-          <ScrollArea className="flex-1 px-4 py-4 chat-wallpaper">
+          <div ref={messagesScrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 chat-wallpaper">
             <div className="space-y-1">
               {groupedItems.map((item, i) => {
                 if (item.type === 'separator') {
@@ -740,8 +745,7 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
                 )
               })}
             </div>
-            <div ref={messagesEndRef} />
-          </ScrollArea>
+          </div>
 
           {/* Message Input */}
           <div
@@ -818,7 +822,7 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
   )
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-[calc(100dvh-4rem)] md:h-dvh overflow-hidden">
       {ConversationListPanel}
       {ChatWindowPanel}
     </div>

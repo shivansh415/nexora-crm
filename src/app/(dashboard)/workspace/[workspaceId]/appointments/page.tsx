@@ -1,4 +1,3 @@
-import { format } from 'date-fns'
 import { Plus, CalendarDays, MapPin, User } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { cn } from '@/lib/utils'
@@ -11,6 +10,22 @@ interface PageProps {
 }
 
 export const metadata = { title: 'Appointments' }
+
+// Always display appointment times in Indian Standard Time,
+// regardless of the server's timezone (Vercel runs in UTC).
+const IST = 'Asia/Kolkata'
+
+function formatDateIST(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-IN', {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: IST,
+  })
+}
+
+function formatTimeIST(iso: string): string {
+  return new Date(iso).toLocaleTimeString('en-IN', {
+    hour: 'numeric', minute: '2-digit', hour12: true, timeZone: IST,
+  })
+}
 
 const STATUS_STYLES: Record<AppointmentStatus, string> = {
   scheduled: 'bg-blue-100 text-blue-700',
@@ -53,7 +68,7 @@ export default async function AppointmentsPage({ params }: PageProps) {
           <div>
             <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{apt.title}</p>
             <p className="text-xs text-zinc-500 mt-0.5">
-              {format(new Date(apt.start_time), 'EEE, MMM d, yyyy')} · {format(new Date(apt.start_time), 'h:mm a')}
+              {formatDateIST(apt.start_time)} · {formatTimeIST(apt.start_time)} IST
             </p>
           </div>
           <span className={cn('rounded-full px-2.5 py-1 text-[10px] font-semibold capitalize', STATUS_STYLES[apt.status])}>

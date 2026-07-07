@@ -12,12 +12,15 @@ function getSupabase() {
 }
 
 interface AppointmentPayload {
+  action?: 'book' | 'cancel' // defaults to 'book' for backward compatibility
   phone: string
-  title: string
-  startTime: string   // ISO string or "YYYY-MM-DD HH:MM"
+  name?: string
+  title?: string
+  startTime?: string // ISO string, e.g. "2026-07-10T15:00:00+05:30"
   endTime?: string
   location?: string
-  notes?: string
+  notes?: string // business, requirement, budget, service interested
+  googleEventId?: string
   conversationId?: string
 }
 
@@ -29,44 +32,136 @@ export async function POST(request: NextRequest) {
     }
 
     const body: AppointmentPayload = await request.json()
-    const { phone, title, startTime, endTime, location, notes, conversationId } = body
+    const { phone, name, title, startTime, endTime, location, notes, googleEventId, conversationId } = body
+    const action = body.action ?? 'book'
 
-    if (!phone || !title || !startTime) {
-      return NextResponse.json({ error: 'Missing required fields: phone, title, startTime' }, { status: 400 })
+    if (!phone) {
+      return NextResponse.json({ error: 'Missing required field: phone' }, { status: 400 })
     }
 
     const supabase = getSupabase()
 
-    // Find contact
+    // ── Find contact (create as fallback so booking never fails) ──
     const { data: contacts } = await supabase
       .from('contacts')
-      .select('id')
+      .select('id, name')
       .eq('workspace_id', WORKSPACE_ID)
       .eq('phone_number', phone)
       .limit(1)
 
-    if (!contacts || contacts.length === 0) {
-      return NextResponse.json({ error: 'Contact not found for phone: ' + phone }, { status: 404 })
+    let contactId: string
+    let contactName: string
+
+    if (contacts && contacts.length > 0) {
+      contactId = contacts[0].id
+      contactName = contacts[0].name
+    } else {
+      const { data: newContact, error: contactErr } = await supabase
+        .from('contacts')
+        .insert({
+          workspace_id: WORKSPACE_ID,
+          phone_number: phone,
+          name: name || phone,
+          source: 'whatsapp',
+          wa_id: phone,
+          lead_score: 60,
+          tags: ['WhatsApp', '♨️ Warm Lead'],
+          last_seen_at: new Date().toISOString(),
+        })
+        .select('id, name')
+        .single()
+
+      if (contactErr || !newContact) {
+        return NextResponse.json({ error: 'Contact not found and could not be created', details: contactErr?.message }, { status: 500 })
+      }
+      contactId = newContact.id
+      contactName = newContact.name
     }
 
-    const contactId = contacts[0].id
-    const start = new Date(startTime)
-    const end = endTime ? new Date(endTime) : new Date(start.getTime() + 60 * 60 * 1000) // +1 hour default
+    // ═══ CANCEL ═══
+    if (action === 'cancel') {
+      let query = supabase
+        .from('appointments')
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .eq('workspace_id', WORKSPACE_ID)
+        .eq('contact_id', contactId)
+        .in('status', ['scheduled', 'confirmed'])
 
-    // Create appointment
+      if (googleEventId) {
+        query = query.eq('google_event_id', googleEventId)
+      }
+
+      const { error: cancelErr } = await query
+      if (cancelErr) {
+        return NextResponse.json({ error: 'Failed to cancel appointment', details: cancelErr.message }, { status: 500 })
+      }
+
+      return NextResponse.json({ success: true, action: 'cancelled' })
+    }
+
+    // ═══ BOOK ═══
+    if (!startTime) {
+      return NextResponse.json({ error: 'Missing required field: startTime' }, { status: 400 })
+    }
+
+    const start = new Date(startTime)
+    if (Number.isNaN(start.getTime())) {
+      return NextResponse.json({ error: 'Invalid startTime — must be ISO 8601' }, { status: 400 })
+    }
+    const end = endTime && !Number.isNaN(new Date(endTime).getTime())
+      ? new Date(endTime)
+      : new Date(start.getTime() + 30 * 60 * 1000) // default 30 min consultation
+
+    // Dedup: skip insert if identical active appointment already exists
+    const { data: existing } = await supabase
+      .from('appointments')
+      .select('id')
+      .eq('workspace_id', WORKSPACE_ID)
+      .eq('contact_id', contactId)
+      .eq('start_time', start.toISOString())
+      .in('status', ['scheduled', 'confirmed'])
+      .limit(1)
+
+    if (existing && existing.length > 0) {
+      return NextResponse.json({ success: true, action: 'booked', appointmentId: existing[0].id, deduped: true })
+    }
+
+    // Find linked conversation if not provided
+    let convId = conversationId ?? null
+    if (!convId) {
+      const { data: convs } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('workspace_id', WORKSPACE_ID)
+        .eq('contact_id', contactId)
+        .limit(1)
+      convId = convs?.[0]?.id ?? null
+    }
+
+    // Find linked lead
+    const { data: leads } = await supabase
+      .from('leads')
+      .select('id, stage')
+      .eq('workspace_id', WORKSPACE_ID)
+      .eq('contact_id', contactId)
+      .limit(1)
+    const lead = leads?.[0] ?? null
+
     const { data: apt, error: aptErr } = await supabase
       .from('appointments')
       .insert({
         workspace_id: WORKSPACE_ID,
         contact_id: contactId,
-        conversation_id: conversationId || null,
-        title,
+        lead_id: lead?.id ?? null,
+        conversation_id: convId,
+        title: title || `Nexora Lab Consultation - ${name || contactName}`,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
-        status: 'scheduled',
+        status: 'confirmed',
         booked_by: 'ai',
-        location: location || null,
+        location: location || 'Google Meet / Phone Call',
         notes: notes || null,
+        google_event_id: googleEventId || null,
       })
       .select('id')
       .single()
@@ -75,23 +170,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create appointment', details: aptErr?.message }, { status: 500 })
     }
 
-    // Update lead stage to qualified if they booked an appointment
-    const { data: lead } = await supabase
-      .from('leads')
-      .select('id, stage')
-      .eq('workspace_id', WORKSPACE_ID)
-      .eq('contact_id', contactId)
-      .limit(1)
-      .single()
-
-    if (lead && lead.stage !== 'won') {
+    // Advance lead to qualified — they booked a consultation
+    if (lead && !['won', 'lost'].includes(lead.stage)) {
       await supabase
         .from('leads')
         .update({ stage: 'qualified', updated_at: new Date().toISOString() })
         .eq('id', lead.id)
     }
 
-    // Update contact lead score to hot
+    // Mark contact as hot
     await supabase
       .from('contacts')
       .update({
@@ -101,7 +188,7 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', contactId)
 
-    return NextResponse.json({ success: true, appointmentId: apt?.id })
+    return NextResponse.json({ success: true, action: 'booked', appointmentId: apt?.id })
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : String(err)
     return NextResponse.json({ error: 'Internal server error', details: errorMessage }, { status: 500 })

@@ -47,8 +47,9 @@ export default async function DashboardPage({ params }: PageProps) {
 
   // ── Live stats ──
   const [
+    { count: newChatsToday },
+    { count: newChatsYesterday },
     { count: msgToday },
-    { count: msgYesterday },
     { count: aiMsgToday },
     { count: outboundToday },
     { data: leads },
@@ -56,13 +57,16 @@ export default async function DashboardPage({ params }: PageProps) {
     { count: appointmentCount },
     { data: conversations },
   ] = await Promise.all([
-    // Messages today (inbound)
+    // New chats (conversations) started today
+    supabase.from('conversations').select('*', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId).gte('created_at', todayStart.toISOString()),
+    // New chats started yesterday
+    supabase.from('conversations').select('*', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+      .gte('created_at', yesterdayStart.toISOString()).lt('created_at', todayStart.toISOString()),
+    // Inbound messages today (for activity panel)
     supabase.from('messages').select('*', { count: 'exact', head: true })
       .eq('workspace_id', workspaceId).eq('direction', 'inbound').gte('created_at', todayStart.toISOString()),
-    // Messages yesterday
-    supabase.from('messages').select('*', { count: 'exact', head: true })
-      .eq('workspace_id', workspaceId).eq('direction', 'inbound')
-      .gte('created_at', yesterdayStart.toISOString()).lt('created_at', todayStart.toISOString()),
     // AI messages today
     supabase.from('messages').select('*', { count: 'exact', head: true })
       .eq('workspace_id', workspaceId).eq('is_ai_generated', true).gte('created_at', todayStart.toISOString()),
@@ -93,8 +97,8 @@ export default async function DashboardPage({ params }: PageProps) {
   }>
 
   const totalMsgToday = msgToday ?? 0
-  const totalMsgYesterday = msgYesterday ?? 0
-  const convDelta = totalMsgToday - totalMsgYesterday
+  const totalNewChatsToday = newChatsToday ?? 0
+  const convDelta = totalNewChatsToday - (newChatsYesterday ?? 0)
   const activeLeads = safeLeads.filter((l) => !['won', 'lost'].includes(l.stage)).length
   const aiRate = (outboundToday ?? 0) > 0 ? Math.round(((aiMsgToday ?? 0) / (outboundToday ?? 1)) * 100) : 0
 
@@ -120,8 +124,8 @@ export default async function DashboardPage({ params }: PageProps) {
           <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 transition-shadow hover:shadow-sm">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Messages Today</p>
-                <p className="mt-2 text-3xl font-bold text-zinc-900 dark:text-zinc-100">{totalMsgToday}</p>
+                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">New Chats Today</p>
+                <p className="mt-2 text-3xl font-bold text-zinc-900 dark:text-zinc-100">{totalNewChatsToday}</p>
               </div>
               <div className="flex size-9 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800">
                 <MessageSquare className="size-4 text-zinc-500" />

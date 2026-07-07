@@ -99,12 +99,19 @@ export async function POST(request: NextRequest) {
       contactId = newContact.id
     }
 
+    // Actual time the user sent the message on WhatsApp (Meta timestamp).
+    // Using this (instead of insert time) keeps ordering correct even when
+    // the AI reply reaches the CRM before this inbound sync does.
+    const inboundSentAt = timestamp
+      ? new Date(Number(timestamp) * 1000).toISOString()
+      : new Date().toISOString()
+
     // ── 2. Upsert Conversation ──
     let conversationId: string
 
     const { data: existingConvs } = await supabase
       .from('conversations')
-      .select('id, unread_count')
+      .select('id, unread_count, last_message_at')
       .eq('workspace_id', WORKSPACE_ID)
       .eq('contact_id', contactId)
       .limit(1)
@@ -112,12 +119,19 @@ export async function POST(request: NextRequest) {
     if (existingConvs && existingConvs.length > 0) {
       conversationId = existingConvs[0].id
       const currentUnread = existingConvs[0].unread_count ?? 0
+      const existingLastAt = existingConvs[0].last_message_at
+      // Only overwrite the preview if this message is newer than the current one
+      const isNewer = !existingLastAt || new Date(inboundSentAt) >= new Date(existingLastAt)
       await supabase
         .from('conversations')
         .update({
           status: 'active',
-          last_message_at: new Date().toISOString(),
-          last_message_preview: (message || '').slice(0, 100),
+          ...(isNewer
+            ? {
+                last_message_at: inboundSentAt,
+                last_message_preview: (message || '').slice(0, 100),
+              }
+            : {}),
           unread_count: currentUnread + 1,
           updated_at: new Date().toISOString(),
         })
@@ -130,7 +144,7 @@ export async function POST(request: NextRequest) {
           contact_id: contactId,
           status: 'active',
           channel: 'whatsapp',
-          last_message_at: new Date().toISOString(),
+          last_message_at: inboundSentAt,
           last_message_preview: (message || '').slice(0, 100),
           unread_count: 1,
         })
@@ -144,9 +158,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── 3. Save Inbound Message ──
-    const msgTimestamp = timestamp
-      ? new Date(Number(timestamp) * 1000).toISOString()
-      : new Date().toISOString()
+    const msgTimestamp = inboundSentAt
 
     const { data: msg, error: msgErr } = await supabase
       .from('messages')
