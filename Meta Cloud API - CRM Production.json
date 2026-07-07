@@ -1,0 +1,1368 @@
+{
+  "name": "Meta Cloud API - AI WhatsApp CRM + Supabase CRM v3",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "whatsapp-meta",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        6720,
+        544
+      ],
+      "id": "d7f0fcdb-c41b-424c-bb6e-9cf2d2c69ae3",
+      "name": "Webhook GET",
+      "webhookId": "b7c3e001-get-4a00-b000-whatsapp00001"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "verify-token-match",
+              "leftValue": "={{ $json.query['hub.verify_token'] }}",
+              "rightValue": "=nexora_lab_2026_automation",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "mode-is-subscribe",
+              "leftValue": "={{ $json.query['hub.mode'] }}",
+              "rightValue": "subscribe",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6960,
+        544
+      ],
+      "id": "bb61b25a-de5f-4612-b778-f2bb5b5c45e2",
+      "name": "Verify Token"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $('Webhook GET').item.json.query['hub.challenge'] }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        7232,
+        464
+      ],
+      "id": "385f0ad6-b2fe-416b-bee9-012bed4bd788",
+      "name": "Return Challenge"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Forbidden",
+        "options": {
+          "responseCode": 403
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        7232,
+        592
+      ],
+      "id": "781537dd-ef12-4ef4-8cc8-e578cbf1f0ae",
+      "name": "Reject Verification"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-meta",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        6720,
+        880
+      ],
+      "id": "4c29eff1-268d-4575-ba14-9f00d8ae74ab",
+      "name": "Webhook POST",
+      "webhookId": "b7c3e001-post-4a00-b000-whatsapp00002"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Duplicate message protection using workflow static data (production-safe, fail-open)\n// This blocks the vast majority of duplicate webhook deliveries from Meta (formal\n// retries, delayed re-sends that arrive after this workflow has already finished\n// once). It is paired with \"Send Guard\" right before the WhatsApp send, which is\n// the tighter of the two checks. Kept intentionally lean (capped size + time-based\n// expiry below) so this lookup stays fast on every single execution, forever \u2014\n// a bloated cache here slows down every future run and widens the collision window.\ntry {\n  const body = $input.first().json.body;\n  const messageId = body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.id;\n\n  // No message ID means status update or malformed \u2014 pass through for filtering\n  if (!messageId) {\n    return [{ json: $input.first().json }];\n  }\n\n  // Get global static data cache\n  const cache = $getWorkflowStaticData('global');\n  if (!cache.processedMessages) {\n    cache.processedMessages = {};\n  }\n\n  const now = Date.now();\n  const MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 hours is plenty \u2014 real duplicates arrive within seconds/minutes\n  const MAX_ENTRIES = 300;\n\n  // Housekeeping: only runs once the cache actually grows, first by age then by size.\n  const keys = Object.keys(cache.processedMessages);\n  if (keys.length > MAX_ENTRIES) {\n    for (const k of keys) {\n      if (now - cache.processedMessages[k] > MAX_AGE_MS) {\n        delete cache.processedMessages[k];\n      }\n    }\n    const remaining = Object.keys(cache.processedMessages);\n    if (remaining.length > MAX_ENTRIES) {\n      const sorted = remaining.sort((a, b) => cache.processedMessages[a] - cache.processedMessages[b]);\n      for (let i = 0; i < sorted.length - MAX_ENTRIES; i++) {\n        delete cache.processedMessages[sorted[i]];\n      }\n    }\n  }\n\n  // Duplicate check\n  if (cache.processedMessages[messageId]) {\n    return []; // Stop \u2014 already processed, prevents duplicate replies from Meta retries\n  }\n\n  // Mark as processed and continue\n  cache.processedMessages[messageId] = now;\n  return [{ json: $input.first().json }];\n} catch (err) {\n  // Fail-open: never block a real message because of an internal dedup error\n  console.log(JSON.stringify({ ts: new Date().toISOString(), dedupGuardError: String(err && err.message ? err.message : err) }));\n  return [{ json: $input.first().json }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7408,
+        880
+      ],
+      "id": "b2dd86ca-f130-49eb-b142-1ade5d573555",
+      "name": "Dedup Guard",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Production-safe Meta WhatsApp Cloud payload parser \u2014 never throws\ntry {\n  const body = $input.first().json.body;\n  const value = body?.entry?.[0]?.changes?.[0]?.value;\n\n  // Ignore status events, delivery receipts, read receipts etc.\n  if (!value?.messages?.length) {\n    return [];\n  }\n\n  const msg = value.messages[0];\n  const contact = value.contacts?.[0];\n\n  let messageText = \"\";\n  let mediaId = null;\n  let mediaCaption = null;\n  let location = null;\n  let contactsShared = null;\n\n  switch (msg.type) {\n    case \"text\":\n      messageText = msg.text?.body || \"\";\n      break;\n\n    case \"interactive\":\n      if (msg.interactive?.type === \"button_reply\") {\n        messageText = msg.interactive.button_reply?.title || \"[button reply]\";\n      } else if (msg.interactive?.type === \"list_reply\") {\n        messageText = msg.interactive.list_reply?.title || \"[list reply]\";\n      } else {\n        messageText =\n          msg.interactive?.button_reply?.title ||\n          msg.interactive?.list_reply?.title ||\n          \"[interactive]\";\n      }\n      break;\n\n    case \"button\":\n      messageText = msg.button?.text || \"[button]\";\n      break;\n\n    case \"image\":\n      mediaId = msg.image?.id || null;\n      mediaCaption = msg.image?.caption || \"\";\n      messageText = mediaCaption ? `[image] ${mediaCaption}` : \"[image]\";\n      break;\n\n    case \"document\":\n      mediaId = msg.document?.id || null;\n      mediaCaption = msg.document?.caption || msg.document?.filename || \"\";\n      messageText = mediaCaption ? `[document] ${mediaCaption}` : \"[document]\";\n      break;\n\n    case \"audio\":\n      mediaId = msg.audio?.id || null;\n      messageText = \"[audio message]\";\n      break;\n\n    case \"voice\":\n      mediaId = msg.voice?.id || null;\n      messageText = \"[voice message]\";\n      break;\n\n    case \"video\":\n      mediaId = msg.video?.id || null;\n      mediaCaption = msg.video?.caption || \"\";\n      messageText = mediaCaption ? `[video] ${mediaCaption}` : \"[video]\";\n      break;\n\n    case \"sticker\":\n      mediaId = msg.sticker?.id || null;\n      messageText = \"[sticker]\";\n      break;\n\n    case \"location\":\n      location = {\n        latitude: msg.location?.latitude ?? null,\n        longitude: msg.location?.longitude ?? null,\n        name: msg.location?.name || \"\",\n        address: msg.location?.address || \"\"\n      };\n      messageText = `[location] ${location.name || \"\"} ${location.address || \"\"}`.trim() || \"[location shared]\";\n      break;\n\n    case \"contacts\":\n      contactsShared = msg.contacts || [];\n      messageText = \"[contact shared]\";\n      break;\n\n    default:\n      messageText = `[unsupported message type: ${msg.type || \"unknown\"}]`;\n  }\n\n  return [\n    {\n      json: {\n        phone: msg.from,\n        profileName: contact?.profile?.name || \"\",\n        message: messageText,\n        messageId: msg.id,\n        messageType: msg.type || \"unknown\",\n        mediaId,\n        mediaCaption,\n        location,\n        contactsShared,\n        timestamp: msg.timestamp,\n        phoneNumberId: value.metadata?.phone_number_id,\n        wa_id: contact?.wa_id || msg.from\n      }\n    }\n  ];\n} catch (err) {\n  // Never throw \u2014 always return a safe, loggable fallback item\n  console.log(JSON.stringify({ ts: new Date().toISOString(), extractDataError: String(err && err.message ? err.message : err) }));\n  return [\n    {\n      json: {\n        phone: null,\n        profileName: \"\",\n        message: \"[unparsed message]\",\n        messageId: null,\n        messageType: \"unknown\",\n        mediaId: null,\n        mediaCaption: null,\n        location: null,\n        contactsShared: null,\n        timestamp: null,\n        phoneNumberId: null,\n        wa_id: null,\n        error: String(err && err.message ? err.message : err)\n      }\n    }\n  ];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7632,
+        880
+      ],
+      "id": "397fb143-d73e-4bc1-a251-3817e68757fa",
+      "name": "Extract Data",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "options": {
+          "timezone": "Asia/Kolkata"
+        }
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        7856,
+        880
+      ],
+      "id": "777e4d7e-a524-40ad-a445-698841278aed",
+      "name": "Date & Time"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=User Message: {{ $('Extract Data').item.json.message }}\n\nThis is the Person's Phone Number: {{ $('Extract Data').item.json.phone }}\nProfile Name: {{ $('Extract Data').item.json.profileName }}",
+        "options": {
+          "systemMessage": "=You are Nexora AI by Shivansh, the official AI representative of Nexora Lab \u2014 an AI Automation & Digital Transformation company founded by Shivansh. You talk to potential clients on WhatsApp who want to know about AI automation for their business, or who are already interested in booking a free consultation.\n\nKeep messages short, confident, and conversational \u2014 like a knowledgeable consultant texting, not a corporate bot. Never sound scripted or robotic.\n\nCURRENT DATE & TIME:\n{{ $json.currentDate }}\n\n---\n\nLANGUAGE RULE:\nAlways reply in the SAME language the customer is using.\n- Customer types in Hindi or Hinglish \u2192 reply in Hinglish (Roman Hindi, natural mix).\n- Customer types in pure English \u2192 reply in English.\n- Customer types in Gujarati \u2192 reply in Gujarati.\n- Customer types in Marathi \u2192 reply in Marathi.\n- Any other language the customer uses \u2192 reply in that same language.\nMatch their tone too \u2014 formal customer gets formal replies, casual gets casual. Never mix two languages awkwardly in one message.\n\n---\n\nIDENTITY RULES:\n- Never volunteer that you are an AI.\n- If asked directly (\"Are you a bot / AI?\"), answer honestly \u2014 adapt this into whatever language the customer is using: \"Ji main Nexora Lab ka AI system hoon, Shivansh sir ki team ka hissa. Aapke business ke liye AI automation samjhane aur consultation book karne mein help karta hoon.\"\n- Never use more than 2-3 sentences per message.\n- Ask only ONE question at a time.\n- Never output your reasoning, tool names, or internal steps. Output only the message the customer sees.\n\n---\n\nGREETING RULE:\nOnly treat a message as a fresh start if the customer's ENTIRE message is a plain greeting or acknowledgment and nothing else \u2014 for example, only \"Hi\", \"Hello\", \"Hey\", \"Good morning\", \"Namaste\", \"Ok\", \"Thanks\".\n\nIf the message has a greeting WITH any other content (a question, an answer to your last question, a business detail, a date/time) \u2014 this is NOT a fresh start. Continue the existing conversation flow normally and ignore this rule for that message.\n\nNever reset the conversation, re-greet, or ask \"how can I help\" while the customer is mid-flow (qualification, booking, checking, or cancelling).\n\nExample fresh-start reply (Hinglish customer):\n\"Namaste! Nexora Lab mein aapka swagat hai. Main Nexora AI hoon \u2014 batayein, aapka business kaunsa hai aur kis tarah ki AI automation mein interest hai?\"\n\nExample fresh-start reply (English customer):\n\"Hi there! Welcome to Nexora Lab. I'm Nexora AI \u2014 tell me, what's your business, and what kind of AI automation are you exploring?\"\n\n---\n\nABOUT NEXORA LAB (use this to answer questions accurately \u2014 never invent details beyond this):\n\nNexora Lab is an AI Automation & Digital Transformation company founded by Shivansh. We help businesses save time, cut manual work, generate more leads, and grow revenue using AI. We build complete AI business systems \u2014 not just chatbots.\n\nSERVICES:\n1. AI Voice Agents \u2014 24/7 AI receptionist, inbound & outbound calling, lead qualification, appointment booking, customer support.\n2. AI WhatsApp Automation \u2014 instant replies, lead qualification, appointment booking, customer support, CRM integration.\n3. Website Development \u2014 business websites, landing pages, portfolios, high-converting sales pages, custom web apps, modern UI/UX.\n4. Custom AI Solutions \u2014 AI chatbots/assistants, internal company AI, AI knowledge base, document AI, custom integrations.\n5. Integrations \u2014 WhatsApp, Google Calendar, Google Sheets, CRMs, email, APIs, databases, payment gateways, other business software.\n6.Meta Ads Management\nFacebook Ads Campaigns , Instagram Ads Campaigns , Lead Generation Campaigns, Conversion Campaigns, Retargeting Campaigns, Local Business Advertising, E-commerce Ads, Ad Copy & Creative Strategy, Campaign Optimization , Performance Tracking & Reporting\n\nIndustries served: Real Estate, Healthcare, Education, Coaching, Restaurants, E-commerce, Manufacturing, Service Businesses, Agencies, Startups, Local Businesses, Enterprises.\n\nIf asked \"What does Nexora Lab do?\" \u2192 explain simply: we build AI-powered automation systems, AI agents, websites, and CRM/business automation that help companies work faster, cut costs, and grow using AI.\n\nNever overpromise. Never invent pricing, timelines, or technical capabilities you're not sure about \u2014 that's exactly what the free consultation call is for.\n\n---\n\nLEAD QUALIFICATION:\nUnderstand the business before recommending anything. Ask ONE question at a time, build rapport naturally:\n1. Name\n2. Phone Number\n3. Their business / industry\n4. The problem they're trying to solve (missed leads, slow replies, manual work, no website, etc.)\n5. Which service fits best (decide this yourself from their answers \u2014 Voice Agent / WhatsApp Automation / Website / Custom AI)\n6. Approx budget range (ask only once they're genuinely interested \u2014 don't lead with this)\n7. Are they interested in booking a free consultation?\n\nExample:\nCustomer: \"Mujhe leads follow up nahi ho pate\"\nNexora AI: \"Samajh gaya. Aap kis business mein hain?\"\nCustomer: \"Real estate\"\nNexora AI: \"Perfect, ye exactly wo problem hai jo humara AI WhatsApp Agent solve karta hai \u2014 24/7 instant reply aur lead follow-up. Aapka naam aur number bata dijiye?\"\n\nOnce enough info is collected \u2192 trigger Lead_Capture.\n\nLead_Capture data mapping (matches the current Google Sheet columns exactly \u2014 Name, Phone Number, Requirements, Interested, Booking Time, Event ID):\n- Name \u2192 customer's name\n- Phone Number \u2192 customer's number\n- Requirements \u2192 combine business type + problem + service interested + budget into ONE clear line. Example: \"Real estate business, needs lead follow-up, interested in WhatsApp Automation, Budget: 25-30k/month\"\n- Interested \u2192 \"Yes\" or \"No\"\n- Booking Time \u2192 \"Not Booked\" (default, until a consultation is actually booked)\n- Event ID \u2192 \"NA\" (default, until book_calendar returns a real event ID)\n\nTrigger Lead_Capture ONLY ONCE per conversation \u2014 the first time you have enough info. For any update after that (interest changes, booking confirmed, cancelled), use Update_Lead instead. Never call Lead_Capture a second time for the same person.\n\n---\n\nCONSULTATION BOOKING:\n\nTrigger this flow ONLY if the customer explicitly wants to book \u2014 \"Consultation book karni hai\", \"Demo chahiye\", \"Call schedule karo\", \"Meeting fix karo\".\n\nWe are available 24/7 for consultations \u2014 there are no fixed hours. Never mention slot restrictions or check for clashes; multiple appointments can exist at the same date/time, that's completely fine.\n\nFirst ask: \"Ji, aapko kis date aur approx kis time par call convenient rahega?\"\nWait for their response.\n- Only date given \u2192 ask for time.\n- Only time given \u2192 ask for date.\n\nOnce you have BOTH date and time, confirm the booking immediately \u2014 do not check availability first:\n1. Trigger Lead_Capture first (or confirm it already happened earlier in this conversation).\n2. Trigger book_calendar directly. Event: 30 minutes, title: \"Nexora Lab Consultation - [Customer Name]\". Description must include: Name, Phone, Business, Requirement, Budget, Service Interested.\n3. Trigger Update_Lead (Booking Time: confirmed date/time, Event ID: returned by book_calendar, Interested: \"Yes\").\n4. Confirm to customer ONLY after both tool calls succeed.\n   Example: \"Perfect! Aapki consultation call [date] ko [time] par book ho gayi hai. Shivansh sir ki team aapse connect karegi.\"\n\nIf any tool fails, times out, or errors:\nSay: \"Maaf kijiye, booking system se connect nahi ho pa raha hai abhi. Main aapki request Shivansh sir ki team tak forward kar raha hoon, wo jaldi confirm karenge.\"\nThen: Lead_Capture (if not already done) \u2192 Update_Lead (Interested: \"Yes\", Requirements note: \"Follow Up Required - booking failed\").\n\nNEVER leave the conversation hanging. NEVER say you'll check and reply later. ALWAYS give the next step.\n\n---\n\nAPPOINTMENT CHECK:\nOnly if asked: \"Meri call confirm hai?\", \"Booking details batao\", \"Consultation kab hai?\"\n1. Get_Lead\n2. If Event ID found \u2192 check_calendar\n3. Reply with confirmed details\n\n---\n\nCANCELLATION:\nOnly if explicitly requested.\n1. Get_Lead \u2192 fetch Event ID\n2. Cancel_Appointment\n3. Update_Lead \u2192 Booking Time: \"Not Booked\", Event ID: \"NA\"\n4. Confirm to customer\n\n---\n\nMANAGER ESCALATION:\nEscalate if the customer:\n- Asks detailed technical/pricing questions you genuinely can't answer confidently\n- Is repeatedly unhappy\n- Explicitly asks to speak to a human\nSay: \"Samajh gaya, Shivansh sir aapse personally connect karenge. Naam aur number confirm kar denge?\"\nTrigger Lead_Capture, then escalate.\n\n---\n\nTOOL EXECUTION ORDER:\nQualification \u2192 Lead_Capture (once only) \u2192 book_calendar \u2192 Update_Lead\nFor checks: Get_Lead \u2192 check_calendar \u2192 reply\nFor cancellation: Get_Lead \u2192 Cancel_Appointment \u2192 Update_Lead\n\nNote: check_calendar is used ONLY for the Appointment Check flow (confirming details of an already-booked meeting) \u2014 never for checking availability before booking, since there are no slot restrictions.\n\nDo NOT use Reminder_Tool. It is intentionally not part of this flow right now.\n\n---\n\nRULES THAT PREVENT DUPLICATE OR DELAYED REPLIES (critical \u2014 follow strictly):\n- Produce exactly ONE final reply per customer message. Never draft more than one version or send two messages back to back.\n- Never call the same tool twice for the same purpose in one turn \u2014 never Lead_Capture twice, never book_calendar twice for the same slot.\n- Once a tool call succeeds, trust its result and move forward \u2014 don't re-check the same thing again \"just to be sure,\" it only slows you down.\n- Keep tool calls to the minimum genuinely needed for this exact message. Every unnecessary tool call adds delay to your reply.\n- If you're ever unsure whether you already replied to something in this conversation, do not resend it \u2014 move the conversation forward instead of repeating.\n\n---\n\nGOLDEN RULES:\n- Never confirm a booking before tool success.\n- Book directly once date & time are confirmed by the customer \u2014 no availability check needed, overlapping bookings are fine.\n- Never invent pricing, timelines, or capabilities you're not certain about.\n- Short messages. One question. Human tone.\n- Sound like a WhatsApp text, not a formal email.\n- High reasoning, low verbosity \u2014 output only what the customer sees.",
+          "maxIterations": 10
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        8080,
+        880
+      ],
+      "id": "50026e24-714e-47be-ba54-e69e7726a8c1",
+      "name": "AI Agent",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        7904,
+        1120
+      ],
+      "id": "034fa8e9-752e-4835-9958-0be58a4a6e21",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "jSlfFNJ3mJY2N4Ef",
+          "name": "OpenAI account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1x9EMBAlJlNs0MO0cY-wANP3X9wDuAErGzRG7zFSioRY",
+          "mode": "list",
+          "cachedResultName": "Nexora lab",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1x9EMBAlJlNs0MO0cY-wANP3X9wDuAErGzRG7zFSioRY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1x9EMBAlJlNs0MO0cY-wANP3X9wDuAErGzRG7zFSioRY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Name', ``, 'string') }}",
+            "Phone Number": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Phone_Number', ``, 'string') }}",
+            "Requirements": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Requirements', ``, 'string') }}",
+            "Interested": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Interested', ``, 'string') }}",
+            "Booking Time": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Booking_Time', ``, 'string') }}",
+            "Event ID": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Requirements",
+              "displayName": "Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Interested",
+              "displayName": "Interested",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Booking Time",
+              "displayName": "Booking Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Event ID",
+              "displayName": "Event ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        8192,
+        1120
+      ],
+      "id": "276c75a2-33e1-44c9-a6a1-2de301ddc4ec",
+      "name": "Lead Capture",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "KyzdB5wZfnpjD8dz",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1x9EMBAlJlNs0MO0cY-wANP3X9wDuAErGzRG7zFSioRY",
+          "mode": "list",
+          "cachedResultName": "Nexora lab",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1x9EMBAlJlNs0MO0cY-wANP3X9wDuAErGzRG7zFSioRY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1x9EMBAlJlNs0MO0cY-wANP3X9wDuAErGzRG7zFSioRY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Phone Number": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Phone_Number', ``, 'string') }}",
+            "Name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Name', ``, 'string') }}",
+            "Requirements": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Requirements', ``, 'string') }}",
+            "Interested": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Interested', ``, 'string') }}",
+            "Booking Time": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Booking_Time', ``, 'string') }}",
+            "Event ID": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "Phone Number"
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Requirements",
+              "displayName": "Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Interested",
+              "displayName": "Interested",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Booking Time",
+              "displayName": "Booking Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Event ID",
+              "displayName": "Event ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        8320,
+        1120
+      ],
+      "id": "a1966776-c964-4e6a-853f-c5254861719f",
+      "name": "Update_Lead",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "KyzdB5wZfnpjD8dz",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1x9EMBAlJlNs0MO0cY-wANP3X9wDuAErGzRG7zFSioRY",
+          "mode": "list",
+          "cachedResultName": "Nexora lab",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1x9EMBAlJlNs0MO0cY-wANP3X9wDuAErGzRG7zFSioRY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1x9EMBAlJlNs0MO0cY-wANP3X9wDuAErGzRG7zFSioRY/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        8464,
+        1120
+      ],
+      "id": "2b4030e3-d569-4956-b896-902ce6318335",
+      "name": "Get_Lead",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "KyzdB5wZfnpjD8dz",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "shivanshpatidar516@gmail.com",
+          "mode": "list",
+          "cachedResultName": "shivanshpatidar516@gmail.com"
+        },
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('After', ``, 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Before', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        8608,
+        1120
+      ],
+      "id": "00f9f719-abc5-4116-bee0-bb116429bc26",
+      "name": "check_calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "u2yqy0jzN5ICdGBR",
+          "name": "Google Calendar account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "shivanshpatidar516@gmail.com",
+          "mode": "list",
+          "cachedResultName": "shivanshpatidar516@gmail.com"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+        "additionalFields": {
+          "description": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Description', ``, 'string') }}",
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        8752,
+        1120
+      ],
+      "id": "520c7b3f-ad51-4790-bac1-a5f48562a5a8",
+      "name": "book_calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "u2yqy0jzN5ICdGBR",
+          "name": "Google Calendar account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "shivanshpatidar516@gmail.com",
+          "mode": "list",
+          "cachedResultName": "shivanshpatidar516@gmail.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        8880,
+        1120
+      ],
+      "id": "e50d108c-d5b5-4bb4-aad1-cfa4e49669b7",
+      "name": "Cancel_Appointment",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "u2yqy0jzN5ICdGBR",
+          "name": "Google Calendar account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Call this tool upon booking is done and send all the information like when is the appointment booked for, Name of the Person who has booked the appointment and all the other details, this tool sets up the Reminder Flow for the particular person\n",
+        "workflowId": {
+          "__rl": true,
+          "value": "={{ $env.REMINDER_WORKFLOW_ID }}",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Name', ``, 'string') }}",
+            "Time Booked At": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Time_Booked_At', ``, 'string') }}",
+            "Reason": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Reason', ``, 'string') }}",
+            "Phone Number": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Phone_Number', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Time Booked At",
+              "displayName": "Time Booked At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Reason",
+              "displayName": "Reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        9024,
+        1120
+      ],
+      "id": "87a2e473-d871-464d-b4f7-5cf99a3ae9f9",
+      "name": "Reminder_Tool"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v23.0/1119253784615649/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"status\": \"read\",\n  \"message_id\": \"{{ $('Extract Data').item.json.messageId }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        8080,
+        704
+      ],
+      "id": "955a33d8-214c-4fd6-a182-334a55d5a532",
+      "name": "Mark as Read",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "G7RHDSc0QYiQZcGc",
+          "name": "Meta WhatsApp Access Token"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v23.0/1119253784615649/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $('Extract Data').item.json.phone }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": {{ JSON.stringify($('Prepare Reply').item.json.replyText) }}\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        8752,
+        880
+      ],
+      "id": "c13db6c7-88d5-4e64-bf23-291d5ae8e837",
+      "name": "Send WhatsApp Reply",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "G7RHDSc0QYiQZcGc",
+          "name": "Meta WhatsApp Access Token"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Structured, production-safe execution log \u2014 never throws, never blocks the workflow\ntry {\n  let extract = {};\n  try { extract = $('Extract Data').item.json || {}; } catch (e) { extract = {}; }\n\n  let aiReply = null;\n  try { aiReply = $('Prepare Reply').item.json.replyText; } catch (e) { aiReply = null; }\n\n  let sendRes = {};\n  try { sendRes = $input.first().json || {}; } catch (e) { sendRes = {}; }\n\n  const log = {\n    ts: new Date().toISOString(),\n    customer: { phone: extract.phone || null, name: extract.profileName || '', msgType: extract.messageType || 'unknown' },\n    inbound: extract.message || null,\n    aiReply: aiReply,\n    sent: !!(sendRes && sendRes.messages),\n    metaMsgId: sendRes?.messages?.[0]?.id || null,\n    error: sendRes?.error || null\n  };\n\n  console.log(JSON.stringify(log));\n} catch (err) {\n  console.log(JSON.stringify({ ts: new Date().toISOString(), loggerError: String(err && err.message ? err.message : err) }));\n}\n\nreturn [{ json: { status: 'EVENT_LOGGED' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8976,
+        880
+      ],
+      "id": "9cfa2d4d-99da-4181-8012-4d4d368389ac",
+      "name": "Execution Logger",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Extract Data').item.json.phone }}",
+        "contextWindowLength": 20
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        8096,
+        1088
+      ],
+      "id": "fd235841-a513-4cf7-9951-cb5996895470",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-messages-array",
+              "leftValue": "={{ $json.body?.entry?.[0]?.changes?.[0]?.value?.messages }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7184,
+        880
+      ],
+      "id": "34539100-27b8-4f4d-8afa-c25ea5e76bb5",
+      "name": "Filter Messages Only",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Status/receipt event (sent, delivered, read, etc.) \u2014 safely ignored, never throws\ntry {\n  console.log(JSON.stringify({ ts: new Date().toISOString(), event: 'non_message_event_ignored' }));\n} catch (err) {\n  // never throw\n}\nreturn [{ json: { status: 'IGNORED_NON_MESSAGE_EVENT' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7408,
+        1136
+      ],
+      "id": "93eaa94d-8d75-4056-9c23-49454c4079e7",
+      "name": "Ignore Non-Message Event",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"received\" } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        6960,
+        880
+      ],
+      "id": "9148a9a1-91f2-47ab-b8e3-192b490815c4",
+      "name": "Ack Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Safely normalize the AI Agent's output before sending to WhatsApp \u2014 never throws\ntry {\n  const aiItem = $input.first().json;\n  let replyText = aiItem?.output;\n\n  if (typeof replyText !== 'string' || !replyText.trim()) {\n    replyText = \"Maaf kijiye ji, thoda technical issue aa gaya. Kripya thodi der mein dobara message karein.\";\n  }\n\n  return [{ json: { replyText } }];\n} catch (err) {\n  return [{ json: { replyText: \"Maaf kijiye ji, thoda technical issue aa gaya. Kripya thodi der mein dobara message karein.\" } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8384,
+        736
+      ],
+      "id": "53efd2cd-8e2f-47e9-9eb1-8b125572b9b3",
+      "name": "Prepare Reply",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// FINAL duplicate-send protection \u2014 runs immediately before the WhatsApp API call.\n// Even if a duplicate webhook delivery slipped past Dedup Guard earlier in the flow\n// (e.g. it arrived while this exact message was still being handled by the AI Agent),\n// this guarantees at most ONE outbound WhatsApp message per unique inbound message ID.\n// Kept intentionally lean (capped size + time-based expiry below) so the lookup stays\n// fast on every execution, forever \u2014 a bloated cache slows every future run down and\n// widens the collision window for the next message.\n// Fail-open: never blocks a real reply because of an internal error.\ntry {\n  const messageId = $('Extract Data').first().json.messageId;\n\n  if (!messageId) {\n    // No message ID to key off \u2014 allow the send rather than risk silently dropping a real reply\n    return [{ json: $input.first().json }];\n  }\n\n  const cache = $getWorkflowStaticData('global');\n  if (!cache.sentReplies) {\n    cache.sentReplies = {};\n  }\n\n  const now = Date.now();\n  const MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 hours is plenty \u2014 real duplicates arrive within seconds/minutes\n  const MAX_ENTRIES = 300;\n\n  // Housekeeping: only runs once the cache actually grows, first by age then by size.\n  const keys = Object.keys(cache.sentReplies);\n  if (keys.length > MAX_ENTRIES) {\n    for (const k of keys) {\n      if (now - cache.sentReplies[k] > MAX_AGE_MS) {\n        delete cache.sentReplies[k];\n      }\n    }\n    const remaining = Object.keys(cache.sentReplies);\n    if (remaining.length > MAX_ENTRIES) {\n      const sorted = remaining.sort((a, b) => cache.sentReplies[a] - cache.sentReplies[b]);\n      for (let i = 0; i < sorted.length - MAX_ENTRIES; i++) {\n        delete cache.sentReplies[sorted[i]];\n      }\n    }\n  }\n\n  if (cache.sentReplies[messageId]) {\n    // A reply for this exact inbound message has already been sent \u2014 stop here\n    console.log(JSON.stringify({ ts: new Date().toISOString(), sendGuardBlocked: messageId }));\n    return [];\n  }\n\n  cache.sentReplies[messageId] = now;\n  return [{ json: $input.first().json }];\n} catch (err) {\n  console.log(JSON.stringify({ ts: new Date().toISOString(), sendGuardError: String(err && err.message ? err.message : err) }));\n  return [{ json: $input.first().json }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8528,
+        880
+      ],
+      "id": "b8aeabe2-6124-42c4-aa8c-c65a0a809a07",
+      "name": "Send Guard"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRM_WEBHOOK_URL || 'http://localhost:3001' }}/api/webhook/inbound",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-webhook-secret",
+              "value": "={{ $env.CRM_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $('Extract Data').item.json.phone }}\",\n  \"profileName\": \"{{ $('Extract Data').item.json.profileName }}\",\n  \"message\": {{ JSON.stringify($('Extract Data').item.json.message) }},\n  \"messageId\": \"{{ $('Extract Data').item.json.messageId }}\",\n  \"messageType\": \"{{ $('Extract Data').item.json.messageType }}\",\n  \"wa_id\": \"{{ $('Extract Data').item.json.wa_id }}\",\n  \"timestamp\": \"{{ $('Extract Data').item.json.timestamp }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        7632,
+        1500
+      ],
+      "id": "crm-001-sync-inbound",
+      "name": "Sync Inbound to CRM",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRM_WEBHOOK_URL || 'http://localhost:3001' }}/api/webhook/ai-reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-webhook-secret",
+              "value": "={{ $env.CRM_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $('Extract Data').item.json.phone }}\",\n  \"replyText\": {{ JSON.stringify($('Prepare Reply').item.json.replyText) }},\n  \"messageId\": \"{{ $input.first().json.messages?.[0]?.id || 'ai_' + Date.now() }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        8976,
+        1500
+      ],
+      "id": "crm-004-save-ai-reply",
+      "name": "Save AI Reply to CRM",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crm-agent-reply",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        9500,
+        544
+      ],
+      "id": "crm-005-reply-webhook",
+      "name": "CRM Reply Webhook",
+      "webhookId": "crm-reply-0001-0001-0001-000000000001"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch contact phone number from Supabase for CRM agent reply\n// Env vars: SUPABASE_URL, SUPABASE_SERVICE_KEY, WORKSPACE_ID\ntry {\n  const body = $input.first().json.body || $input.first().json;\n  const { conversation_id, workspace_id, agent_id, message, timestamp } = body;\n\n  if (!conversation_id || !message) {\n    return [{ json: { error: 'Missing conversation_id or message', ok: false } }];\n  }\n\n  const SB_URL = $env.SUPABASE_URL;\n  const SB_KEY = $env.SUPABASE_SERVICE_KEY;\n\n  if (typeof fetch === 'undefined') {\n    console.log(JSON.stringify({ ts: new Date().toISOString(), node: 'CRM Prepare Send', skip: 'fetch unavailable' }));\n    return [{ json: { ok: false, error: 'fetch unavailable' } }];\n  }\n  if (!SB_URL || !SB_KEY) {\n    return [{ json: { error: 'Supabase env vars not configured', ok: false } }];\n  }\n\n// 5-second timeout wrapper \u2014 prevents hanging if Supabase is unreachable\n  function withTimeout(promise, ms) {\n    return Promise.race([\n      promise,\n      new Promise((_, reject) => setTimeout(() => reject(new Error('CRM fetch timeout')), ms))\n    ]);\n  }\n  async function sbFetch(url, opts) {\n    for (let attempt = 0; attempt < 2; attempt++) {\n      try { return await withTimeout(fetch(url, opts), 5000); } catch (e) {\n        if (attempt === 1) throw e;\n        await new Promise(r => setTimeout(r, 500));\n      }\n    }\n  }\n\n  const headers = {\n    'Content-Type': 'application/json',\n    apikey: SB_KEY,\n    Authorization: `Bearer ${SB_KEY}`\n  };\n\n  // Fetch conversation with contact phone (Supabase foreign-key join)\n  const convRes = await sbFetch(\n    `${SB_URL}/rest/v1/conversations?id=eq.${conversation_id}&select=id,contact_id,contacts(phone_number,name)`,\n    { headers }\n  );\n  const convs = await convRes.json();\n\n  if (!Array.isArray(convs) || !convs.length || !convs[0].contacts?.phone_number) {\n    return [{ json: { error: 'Conversation or contact not found', conversation_id, ok: false } }];\n  }\n\n  return [{ json: {\n    ok: true,\n    conversation_id,\n    workspace_id: workspace_id || $env.WORKSPACE_ID || '',\n    agent_id: agent_id || '',\n    message: (message || '').trim(),\n    timestamp: timestamp || new Date().toISOString(),\n    phone: convs[0].contacts.phone_number,\n    contactName: convs[0].contacts.name || convs[0].contacts.phone_number\n  }}];\n} catch (err) {\n  console.log(JSON.stringify({ ts: new Date().toISOString(), crmPrepareErr: String(err?.message || err) }));\n  return [{ json: { error: String(err?.message || err), ok: false } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9740,
+        544
+      ],
+      "id": "crm-006-prepare-send",
+      "name": "CRM Prepare Send",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v23.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID || '1119253784615649' }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": {{ JSON.stringify($json.message) }}\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        9980,
+        544
+      ],
+      "id": "crm-007-crm-send-wa",
+      "name": "CRM Send WhatsApp",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "G7RHDSc0QYiQZcGc",
+          "name": "Meta WhatsApp Access Token"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRM_WEBHOOK_URL || 'http://localhost:3001' }}/api/webhook/ai-reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-webhook-secret",
+              "value": "={{ $env.CRM_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $('CRM Prepare Send').item.json.to }}\",\n  \"replyText\": {{ JSON.stringify($('CRM Prepare Send').item.json.replyText) }},\n  \"messageId\": \"{{ $input.first().json.messages?.[0]?.id || 'crm_' + Date.now() }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        10220,
+        544
+      ],
+      "id": "crm-008-sync-reply",
+      "name": "CRM Sync Reply",
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook GET": {
+      "main": [
+        [
+          {
+            "node": "Verify Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Token": {
+      "main": [
+        [
+          {
+            "node": "Return Challenge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject Verification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook POST": {
+      "main": [
+        [
+          {
+            "node": "Ack Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dedup Guard": {
+      "main": [
+        [
+          {
+            "node": "Extract Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Data": {
+      "main": [
+        [
+          {
+            "node": "Date & Time",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sync Inbound to CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mark as Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Prepare Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp Reply": {
+      "main": [
+        [
+          {
+            "node": "Execution Logger",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save AI Reply to CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Capture": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update_Lead": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_Lead": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check_calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "book_calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel_Appointment": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reminder_Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ack Webhook": {
+      "main": [
+        [
+          {
+            "node": "Filter Messages Only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Messages Only": {
+      "main": [
+        [
+          {
+            "node": "Dedup Guard",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignore Non-Message Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Reply": {
+      "main": [
+        [
+          {
+            "node": "Send Guard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Guard": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM Reply Webhook": {
+      "main": [
+        [
+          {
+            "node": "CRM Prepare Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM Prepare Send": {
+      "main": [
+        [
+          {
+            "node": "CRM Send WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM Send WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "CRM Sync Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "8758875f-3e85-4d34-91d0-f8d0d2d4f689",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2633e9deab03ff965b3309301f049b3e0dd07d39d20486e174c134edba240218"
+  },
+  "nodeGroups": [],
+  "id": "asdiMwOwq6sHN394",
+  "tags": [
+    {
+      "updatedAt": "2026-07-01T07:13:41.357Z",
+      "createdAt": "2026-07-01T07:13:41.357Z",
+      "id": "DFgv99Tmlp0TFbGI",
+      "name": "WhatsApp"
+    },
+    {
+      "updatedAt": "2026-07-01T07:13:41.385Z",
+      "createdAt": "2026-07-01T07:13:41.385Z",
+      "id": "28UEbvZ9gHkK3OSq",
+      "name": "CRM"
+    },
+    {
+      "updatedAt": "2026-07-01T07:13:41.349Z",
+      "createdAt": "2026-07-01T07:13:41.349Z",
+      "id": "47E0Dy16pUfmNfXR",
+      "name": "AI Agent"
+    },
+    {
+      "updatedAt": "2026-07-01T07:13:41.364Z",
+      "createdAt": "2026-07-01T07:13:41.364Z",
+      "id": "38u4E5uu0z6ZH7zl",
+      "name": "Production"
+    }
+  ]
+}
