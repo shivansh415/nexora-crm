@@ -45,9 +45,11 @@ function getVariedGreeting(hour: number): string {
     greetings = eveningGreetings
   }
 
-  // Use date as seed for consistent greeting throughout the day
-  const today = new Date()
-  const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate()
+  // Use the IST date as seed for a consistent greeting throughout the day
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date())
+  const seed = Number(parts.replace(/-/g, ''))
   const index = seed % greetings.length
   return greetings[index]
 }
@@ -124,10 +126,14 @@ export default async function DashboardPage({ params }: PageProps) {
   const activeLeads = safeLeads.filter((l) => !['won', 'lost'].includes(l.stage)).length
   const aiRate = (outboundToday ?? 0) > 0 ? Math.round(((aiMsgToday ?? 0) / (outboundToday ?? 1)) * 100) : 0
 
-  const hour = new Date().getHours()
+  // Compute the hour and date in IST so the server (UTC) renders the correct local day/time
+  const hour = Number(
+    new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', hour12: false }).format(new Date()),
+  )
   const greeting = getVariedGreeting(hour)
-  const today = new Date()
-  const dateStr = `${today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`
+  const dateStr = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+  }).format(new Date())
 
   return (
     <div className="p-6 max-w-7xl">
