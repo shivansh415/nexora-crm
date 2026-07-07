@@ -24,15 +24,23 @@ function getAvatarColor(name: string): string {
 }
 
 function LeadScoreBar({ score }: { score: number }) {
+  const isHot = score >= 80
+  const isWarm = score >= 50 && score < 80
+  const isCool = score >= 30 && score < 50
+  const label = isHot ? '🔥 Hot' : isWarm ? '♨️ Warm' : isCool ? '🌡️ Cool' : '❄️ Cold'
+  const cls = isHot ? 'bg-red-100 text-red-700' : isWarm ? 'bg-amber-100 text-amber-700' : isCool ? 'bg-blue-100 text-blue-700' : 'bg-zinc-100 text-zinc-500'
   return (
-    <div className="flex items-center gap-1.5">
-      <div className="h-1.5 w-20 rounded-full bg-zinc-100 overflow-hidden">
-        <div
-          className={cn('h-full rounded-full', score >= 80 ? 'bg-green-500' : score >= 50 ? 'bg-amber-400' : 'bg-zinc-300')}
-          style={{ width: `${score}%` }}
-        />
+    <div className="flex items-center gap-2">
+      <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', cls)}>{label}</span>
+      <div className="flex items-center gap-1">
+        <div className="h-1.5 w-16 rounded-full bg-zinc-100 overflow-hidden">
+          <div
+            className={cn('h-full rounded-full', isHot ? 'bg-red-500' : isWarm ? 'bg-amber-400' : isCool ? 'bg-blue-400' : 'bg-zinc-300')}
+            style={{ width: `${score}%` }}
+          />
+        </div>
+        <span className="text-[10px] text-zinc-400">{score}</span>
       </div>
-      <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{score}</span>
     </div>
   )
 }

@@ -36,15 +36,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 
-type ConvFilter = 'all' | 'open' | 'human_takeover' | 'ai_active' | 'resolved' | 'unread'
+type ConvFilter = 'all' | 'open' | 'human_takeover' | 'ai_active'
 
 const FILTERS: { id: ConvFilter; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'open', label: 'Open' },
   { id: 'human_takeover', label: 'Takeover' },
   { id: 'ai_active', label: 'AI Active' },
-  { id: 'resolved', label: 'Resolved' },
-  { id: 'unread', label: 'Unread' },
 ]
 
 function getInitials(name: string) {
@@ -167,7 +165,7 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
       .from('messages')
       .select('*')
       .eq('conversation_id', convId)
-      .order('timestamp', { ascending: true })
+      .order('created_at', { ascending: true })
       .limit(200)
 
     if (error) {
@@ -269,13 +267,14 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
             status: row.status ?? 'sent',
             is_deleted: false,
             metadata: row.metadata ?? {},
-            sent_at: row.timestamp ?? row.created_at,
+            sent_at: row.created_at,
             created_at: row.created_at,
           }
           setMessages((prev) => {
             // Avoid duplicates
             if (prev.some((m) => m.id === newMsg.id)) return prev
-            return [...prev, newMsg]
+            // Sort by created_at to maintain correct order
+            return [...prev, newMsg].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
           })
         }
       )
@@ -297,8 +296,6 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
     if (filter === 'open') return conv.status === 'open'
     if (filter === 'human_takeover') return conv.status === 'human_takeover'
     if (filter === 'ai_active') return conv.ai_mode === 'enabled'
-    if (filter === 'resolved') return conv.status === 'resolved'
-    if (filter === 'unread') return conv.unread_count > 0
     return true
   })
 
@@ -313,6 +310,18 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
   function selectConversation(conv: Conversation) {
     setSelectedConvId(conv.id)
     setShowMobileChat(true)
+    // Mark as read
+    if (conv.unread_count > 0) {
+      fetch('/api/conversations/mark-read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: conv.id }),
+      }).then(() => {
+        setConversations((prev) =>
+          prev.map((c) => c.id === conv.id ? { ...c, unread_count: 0 } : c)
+        )
+      })
+    }
   }
 
   // ── Send message via API route ────────────────────────────────────────────
