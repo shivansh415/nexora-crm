@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 
-/**
- * POST /api/messages/send
- *
- * Forwards an agent-composed reply to n8n, which is the single source of truth
- * for all WhatsApp operations (sending, retries, delivery tracking, logging).
- *
- * Flow: CRM → n8n webhook → WhatsApp Cloud API → Supabase → Realtime → CRM
- *
- * The CRM never calls the WhatsApp Cloud API directly.
- */
+const WORKSPACE_ID = 'f38c0ad0-d4ef-4090-94eb-50d3f6a21bce'
+
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
+}
+
 export async function POST(req: NextRequest) {
   try {
-    // 1. Verify caller is authenticated
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    // 1. Auth check — use anon client for auth, admin for DB writes
+    const { createClient: createServerClient } = await import('@/lib/supabase/server')
+    const authSupabase = await createServerClient()
+    const { data: { user } } = await authSupabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -26,64 +25,108 @@ export async function POST(req: NextRequest) {
       message: string
     }
 
-    if (!conversationId || !workspaceId || !message?.trim()) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    if (!conversationId || !message?.trim()) {
+      return NextResponse.json({ error: 'Missing conversationId or message' }, { status: 400 })
     }
 
-    const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-    const adminHeaders = {
-      'Content-Type': 'application/json',
-      apikey: sbKey,
-      Authorization: `Bearer ${sbKey}`,
+    const supabase = getSupabase()
+
+    // 2. Get the contact's phone number from this conversation
+    const { data: conv, error: convErr } = await supabase
+      .from('conversations')
+      .select('contact_id, contacts(phone_number)')
+      .eq('id', conversationId)
+      .single()
+
+    if (convErr || !conv) {
+      return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
     }
 
-    // 2. Fetch the workspace's n8n webhook URL
-    const wsRes = await fetch(
-      `${sbUrl}/rest/v1/workspaces?id=eq.${encodeURIComponent(workspaceId)}&select=n8n_webhook_url`,
-      { headers: adminHeaders }
-    )
-    if (!wsRes.ok) {
-      return NextResponse.json({ error: 'Failed to fetch workspace' }, { status: 500 })
+    const phone = (conv as any).contacts?.phone_number
+    if (!phone) {
+      return NextResponse.json({ error: 'Contact phone number not found' }, { status: 404 })
     }
-    const wsData = await wsRes.json() as Array<{ n8n_webhook_url: string | null }>
-    const n8nWebhookUrl = wsData[0]?.n8n_webhook_url ?? process.env.N8N_WEBHOOK_URL
 
-    if (!n8nWebhookUrl) {
-      return NextResponse.json(
-        {
-          error: 'n8n webhook URL not configured',
-          hint: 'Set n8n_webhook_url on the workspace row, or add N8N_WEBHOOK_URL to .env.local',
+    // 3. Send via Meta WhatsApp Cloud API directly
+    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
+    const accessToken = process.env.WHATSAPP_ACCESS_TOKEN
+
+    if (!phoneNumberId || !accessToken) {
+      return NextResponse.json({
+        error: 'WhatsApp credentials not configured',
+        hint: 'Add WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN to .env.local',
+      }, { status: 503 })
+    }
+
+    const waRes = await fetch(
+      `https://graph.facebook.com/v23.0/${phoneNumberId}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
         },
-        { status: 503 }
-      )
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: phone,
+          type: 'text',
+          text: { preview_url: false, body: message.trim() },
+        }),
+      }
+    )
+
+    const waData = await waRes.json()
+
+    if (!waRes.ok) {
+      console.error('[send] WhatsApp API error:', waData)
+      return NextResponse.json({
+        error: 'WhatsApp API error',
+        details: waData?.error?.message || JSON.stringify(waData).slice(0, 300),
+      }, { status: 502 })
     }
 
-    // 3. Forward to n8n — n8n handles WhatsApp sending, message saving, and logging
-    const n8nRes = await fetch(n8nWebhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        event: 'agent_reply',
+    const waMsgId = waData?.messages?.[0]?.id || `agent_${Date.now()}`
+
+    // 4. Save the agent message to Supabase
+    const { data: savedMsg, error: msgErr } = await supabase
+      .from('messages')
+      .insert({
+        workspace_id: workspaceId || WORKSPACE_ID,
         conversation_id: conversationId,
-        workspace_id: workspaceId,
-        agent_id: user.id,
-        message: message.trim(),
+        wa_message_id: waMsgId,
+        direction: 'outbound',
+        sender_type: 'agent',
+        sender_id: user.id,
+        message_type: 'text',
+        content: message.trim(),
+        status: 'sent',
+        is_ai_generated: false,
         timestamp: new Date().toISOString(),
-      }),
-    })
+      })
+      .select('id')
+      .single()
 
-    if (!n8nRes.ok) {
-      const errText = await n8nRes.text()
-      console.error('[send] n8n error:', n8nRes.status, errText.slice(0, 200))
-      return NextResponse.json(
-        { error: 'n8n rejected the request', details: errText.slice(0, 200) },
-        { status: 502 }
-      )
+    if (msgErr) {
+      console.error('[send] Failed to save message to DB:', msgErr)
+      // Message was sent via WhatsApp but DB save failed — not critical
     }
 
-    const n8nData = await n8nRes.json().catch(() => ({}))
-    return NextResponse.json({ ok: true, forwarded_to: 'n8n', n8n: n8nData })
+    // 5. Update conversation metadata
+    await supabase
+      .from('conversations')
+      .update({
+        last_message_at: new Date().toISOString(),
+        last_message_preview: message.trim().slice(0, 100),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', conversationId)
+
+    return NextResponse.json({
+      ok: true,
+      messageId: savedMsg?.id ?? null,
+      whatsappMessageId: waMsgId,
+    })
   } catch (err) {
     console.error('[send] Unexpected error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
