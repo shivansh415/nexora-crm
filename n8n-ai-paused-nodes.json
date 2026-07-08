@@ -1,0 +1,68 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Check if AI is paused for this contact's conversation in Supabase\ntry {\n  const phone = $('Extract Data').first().json.phone;\n  if (!phone) {\n    return [{ json: { ...($input.first().json), aiPaused: false } }];\n  }\n\n  const SB_URL = $env.SUPABASE_URL || 'https://poailedbsjhxjbniknqg.supabase.co';\n  const SB_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n\n  if (!SB_KEY) {\n    console.log(JSON.stringify({ ts: new Date().toISOString(), checkAiPaused: 'no_key', phone }));\n    return [{ json: { ...($input.first().json), aiPaused: false } }];\n  }\n\n  const contactRes = await fetch(\n    `${SB_URL}/rest/v1/contacts?phone_number=eq.${encodeURIComponent(phone)}&select=id&limit=1`,\n    { headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` } }\n  );\n  const contacts = await contactRes.json();\n\n  if (!contacts || !contacts.length) {\n    return [{ json: { ...($input.first().json), aiPaused: false } }];\n  }\n\n  const contactId = contacts[0].id;\n\n  const convRes = await fetch(\n    `${SB_URL}/rest/v1/conversations?contact_id=eq.${contactId}&select=id,ai_paused&limit=1`,\n    { headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` } }\n  );\n  const convs = await convRes.json();\n\n  if (!convs || !convs.length) {\n    return [{ json: { ...($input.first().json), aiPaused: false } }];\n  }\n\n  const aiPaused = convs[0].ai_paused === true;\n  console.log(JSON.stringify({ ts: new Date().toISOString(), checkAiPaused: aiPaused, phone, contactId, convId: convs[0].id }));\n\n  return [{ json: { ...($input.first().json), aiPaused } }];\n} catch (err) {\n  console.log(JSON.stringify({ ts: new Date().toISOString(), checkAiPausedError: String(err && err.message ? err.message : err) }));\n  return [{ json: { ...($input.first().json), aiPaused: false } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7720,
+        700
+      ],
+      "id": "check-ai-paused-001",
+      "name": "Check AI Paused",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ai-not-paused",
+              "leftValue": "={{ $json.aiPaused }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7940,
+        700
+      ],
+      "id": "ai-paused-if-001",
+      "name": "AI Paused?"
+    }
+  ],
+  "connections": {
+    "Check AI Paused": {
+      "main": [
+        [
+          {
+            "node": "AI Paused?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "meta": {
+    "instanceId": "paste-helper"
+  }
+}
