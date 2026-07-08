@@ -1,0 +1,108 @@
+{
+  "name": "Nexora - Calendar to CRM Appointment Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "eventCreated",
+        "calendarId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "cal-trigger-0001-0001-000000000001",
+      "name": "New Calendar Event"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the booking details out of the calendar event created by the AI agent.\n// Event description format (from the system prompt):\n// Name: ..., Phone: ..., Business: ..., Requirement: ..., Budget: ..., Service Interested: ...\nconst ev = $input.first().json;\n\nconst summary = ev.summary || '';\nconst description = ev.description || '';\nconst text = summary + String.fromCharCode(10) + description;\n\n// Only sync Nexora consultation events (skip personal calendar events)\nif (!/nexora/i.test(summary)) {\n  return []; // not a booking made by the agent - ignore\n}\n\n// Extract phone: first 10-15 digit sequence in the description\nconst phoneMatch = text.replace(/[\\s+-]/g, '').match(/(91\\d{10}|\\d{10,14})/);\nconst phone = phoneMatch ? (phoneMatch[1].length === 10 ? '91' + phoneMatch[1] : phoneMatch[1]) : '';\n\n// Extract name: from 'Name: X' in description, else from summary after the dash\nlet name = '';\nconst nameMatch = description.match(/name\\s*[:\\-]\\s*([^\\n,;]+)/i);\nif (nameMatch) name = nameMatch[1].trim();\nif (!name) {\n  const sumMatch = summary.match(/[-–]\\s*(.+)$/);\n  if (sumMatch) name = sumMatch[1].trim();\n}\nif (!name) name = 'WhatsApp Lead';\n\nconst startTime = ev.start?.dateTime || ev.start?.date || '';\nconst googleEventId = ev.id || '';\n\nif (!phone || !startTime || !googleEventId) {\n  return []; // not enough data to sync safely\n}\n\nreturn [{ json: {\n  action: 'book',\n  phone,\n  name,\n  startTime,\n  googleEventId,\n  notes: description.slice(0, 500)\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "cal-parse-0002-0002-000000000002",
+      "name": "Parse Booking Details"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://nexora-crm-chi.vercel.app/api/webhook/appointment",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-secret",
+              "value": "nnhA4Z3hz77E"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "cal-sync-0003-0003-000000000003",
+      "name": "Sync to CRM",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    }
+  ],
+  "connections": {
+    "New Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Parse Booking Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Booking Details": {
+      "main": [
+        [
+          {
+            "node": "Sync to CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
