@@ -6,6 +6,7 @@ import {
   Search,
   Filter,
   Pin,
+  Plus,
   Bot,
   UserRound,
   CheckCheck,
@@ -18,6 +19,14 @@ import {
   AlertCircle,
   Sparkles,
   RefreshCw,
+  FileText,
+  Paperclip,
+  Mic,
+  Square,
+  X,
+  ImageIcon,
+  Pencil,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getSupabaseClient } from '@/lib/supabase/client'
@@ -34,7 +43,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+
+// Display-only agent name for the New chat message preview.
+// Mirrors WHATSAPP_AGENT_NAME used server-side in renderOutreachPreview().
+const OUTREACH_AGENT_DISPLAY = 'Shivansh'
 
 type ConvFilter = 'all' | 'open' | 'human_takeover' | 'ai_active'
 
@@ -73,10 +94,72 @@ function getDateSeparator(dateStr: string): string {
 }
 
 function MessageStatus({ status }: { status: string }) {
-  if (status === 'read') return <CheckCheck className="size-3 text-blue-400" />
+  if (status === 'read') return <CheckCheck className="size-3 text-blue-500" />
   if (status === 'delivered') return <CheckCheck className="size-3 text-zinc-400" />
   if (status === 'sent') return <Check className="size-3 text-zinc-400" />
+  if (status === 'failed') {
+    return (
+      <span className="flex items-center gap-0.5 text-red-500" title="Not delivered by WhatsApp">
+        <AlertCircle className="size-3" />
+      </span>
+    )
+  }
   return null
+}
+
+// Renders a message body based on its type: image, audio/voice, video, document, or text.
+function MessageBody({ msg }: { msg: Message }) {
+  // content_type is a narrow union in the generated types, but the DB stores
+  // extra kinds (audio/voice); treat as string for comparison.
+  const type = msg.content_type as string
+  const url = msg.media_url
+
+  if (url && type === 'image') {
+    return (
+      <div className="space-y-1">
+        <a href={url} target="_blank" rel="noopener noreferrer">
+          <img
+            src={url}
+            alt={msg.content || 'Image'}
+            className="max-h-64 w-auto rounded-md object-cover"
+            loading="lazy"
+          />
+        </a>
+        {msg.content && <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>}
+      </div>
+    )
+  }
+
+  if (url && (type === 'audio' || type === 'voice')) {
+    return (
+      <div className="min-w-[180px]">
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+        <audio controls src={url} className="w-full h-9" />
+      </div>
+    )
+  }
+
+  if (url && type === 'video') {
+    return (
+      <video controls src={url} className="max-h-64 w-auto rounded-md" />
+    )
+  }
+
+  if (url && (type === 'document' || type === 'file')) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 underline"
+      >
+        <FileText className="size-4 shrink-0" />
+        <span className="truncate">{msg.content || 'Document'}</span>
+      </a>
+    )
+  }
+
+  return <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
 }
 
 interface ChatViewProps {
@@ -97,6 +180,30 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const messagesScrollRef = useRef<HTMLDivElement>(null)
+
+  // ── New chat dialog ──
+  const [newChatOpen, setNewChatOpen] = useState(false)
+  const [newPhone, setNewPhone] = useState('')
+  const [newName, setNewName] = useState('')
+  const [startingChat, setStartingChat] = useState(false)
+
+  // ── Edit / delete message ──
+  const [editingMsg, setEditingMsg] = useState<Message | null>(null)
+  const [editText, setEditText] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [deletingMsg, setDeletingMsg] = useState<Message | null>(null)
+  const [deletingBusy, setDeletingBusy] = useState(false)
+
+  // ── Media attachment / voice recording ──
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [pendingUrl, setPendingUrl] = useState<string>('')
+  const [pendingKind, setPendingKind] = useState<'image' | 'voice' | null>(null)
+  const [recording, setRecording] = useState(false)
+  const [recordSecs, setRecordSecs] = useState(0)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const recordedChunksRef = useRef<Blob[]>([])
+  const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // ── Fetch conversations from Supabase ──────────────────────────────────────
   const fetchConversations = useCallback(async () => {
@@ -283,6 +390,47 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
           })
         }
       )
+      // Status changes (sent → delivered → read) and edits arrive as UPDATE events.
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${selectedConvId}`,
+        },
+        (payload) => {
+          const row = payload.new as any
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === row.id
+                ? {
+                    ...m,
+                    content: row.content ?? m.content,
+                    status: row.status ?? m.status,
+                    content_type: row.message_type ?? m.content_type,
+                    media_url: row.media_url ?? m.media_url,
+                    metadata: row.metadata ?? m.metadata,
+                  }
+                : m
+            )
+          )
+        }
+      )
+      // Deleted messages disappear from the thread.
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          const oldRow = payload.old as any
+          if (!oldRow?.id) return
+          setMessages((prev) => prev.filter((m) => m.id !== oldRow.id))
+        }
+      )
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
@@ -331,7 +479,13 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
 
   // ── Send message via API route ────────────────────────────────────────────
   async function handleSend() {
-    if (!messageText.trim() || !selectedConvId || sending) return
+    if (!selectedConvId || sending) return
+    // If there's a pending attachment (image or voice note), send that instead.
+    if (pendingFile) {
+      await handleSendMedia()
+      return
+    }
+    if (!messageText.trim()) return
     setSending(true)
     try {
       const res = await fetch('/api/messages/send', {
@@ -345,7 +499,9 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
       })
       const data = await res.json()
       if (!res.ok) {
-        toast.error(data.error ?? 'Failed to send message')
+        toast.error(data.error ?? 'Failed to send message', {
+          duration: data.windowClosed ? 8000 : 4000,
+        })
         return
       }
       setMessageText('')
@@ -354,6 +510,200 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
       toast.error('Network error — could not send message')
     } finally {
       setSending(false)
+    }
+  }
+
+  // ── Edit / delete a sent message ────────────────────────────────────────────
+  function openEditMessage(msg: Message) {
+    setEditingMsg(msg)
+    setEditText(msg.content ?? '')
+  }
+
+  async function handleSaveEdit() {
+    if (!editingMsg || !editText.trim() || savingEdit) return
+    const id = editingMsg.id
+    const newText = editText.trim()
+    setSavingEdit(true)
+    try {
+      const res = await fetch('/api/messages/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId: id, content: newText }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error ?? 'Failed to edit message')
+        return
+      }
+      // Optimistic update (realtime will confirm)
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === id
+            ? { ...m, content: newText, metadata: { ...(m.metadata as object), edited: true } }
+            : m
+        )
+      )
+      toast.success('Message updated')
+      setEditingMsg(null)
+      setEditText('')
+    } catch {
+      toast.error('Network error — could not edit message')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  async function handleConfirmDelete() {
+    if (!deletingMsg || deletingBusy) return
+    const id = deletingMsg.id
+    setDeletingBusy(true)
+    try {
+      const res = await fetch('/api/messages/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId: id }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error ?? 'Failed to delete message')
+        return
+      }
+      setMessages((prev) => prev.filter((m) => m.id !== id))
+      toast.success('Message deleted')
+      setDeletingMsg(null)
+    } catch {
+      toast.error('Network error — could not delete message')
+    } finally {
+      setDeletingBusy(false)
+    }
+  }
+
+  // ── Media: pick image ──────────────────────────────────────────────────────
+  function onPickImage(file: File) {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file')
+      return
+    }
+    if (file.size > 16 * 1024 * 1024) {
+      toast.error('Image too large (max 16MB)')
+      return
+    }
+    clearPending()
+    setPendingFile(file)
+    setPendingUrl(URL.createObjectURL(file))
+    setPendingKind('image')
+  }
+
+  function clearPending() {
+    if (pendingUrl) URL.revokeObjectURL(pendingUrl)
+    setPendingFile(null)
+    setPendingUrl('')
+    setPendingKind(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  // ── Media: send the pending attachment ─────────────────────────────────────
+  async function handleSendMedia() {
+    if (!pendingFile || !selectedConvId || sending) return
+    setSending(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', pendingFile)
+      fd.append('conversationId', selectedConvId)
+      if (pendingKind === 'voice') fd.append('voice', 'true')
+      if (pendingKind === 'image' && messageText.trim()) fd.append('caption', messageText.trim())
+
+      const res = await fetch('/api/messages/send-media', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error ?? data.details ?? 'Failed to send attachment', {
+          duration: data.windowClosed ? 8000 : 4000,
+        })
+        return
+      }
+      setMessageText('')
+      clearPending()
+      // Realtime will append the message
+    } catch {
+      toast.error('Network error — could not send attachment')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  // ── Voice recording ─────────────────────────────────────────────────────────
+  async function startRecording() {
+    if (recording) return
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // Prefer ogg/opus (accepted by WhatsApp); fall back to whatever the browser supports.
+      const preferred = ['audio/ogg;codecs=opus', 'audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
+      const mimeType = preferred.find((t) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t)) || ''
+      const rec = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+      recordedChunksRef.current = []
+      rec.ondataavailable = (e) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data) }
+      rec.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop())
+        const type = rec.mimeType || 'audio/ogg'
+        const blob = new Blob(recordedChunksRef.current, { type })
+        const ext = type.includes('ogg') ? 'ogg' : type.includes('mp4') ? 'm4a' : 'webm'
+        const file = new File([blob], `voice-${Date.now()}.${ext}`, { type })
+        clearPending()
+        setPendingFile(file)
+        setPendingUrl(URL.createObjectURL(blob))
+        setPendingKind('voice')
+      }
+      mediaRecorderRef.current = rec
+      rec.start()
+      setRecording(true)
+      setRecordSecs(0)
+      recordTimerRef.current = setInterval(() => setRecordSecs((s) => s + 1), 1000)
+    } catch {
+      toast.error('Microphone access denied or unavailable')
+    }
+  }
+
+  function stopRecording(save: boolean) {
+    if (recordTimerRef.current) { clearInterval(recordTimerRef.current); recordTimerRef.current = null }
+    const rec = mediaRecorderRef.current
+    if (!rec) { setRecording(false); return }
+    if (!save) {
+      // Discard: remove onstop handler so no pending file is created
+      rec.onstop = () => rec.stream?.getTracks?.().forEach((t) => t.stop())
+    }
+    if (rec.state !== 'inactive') rec.stop()
+    mediaRecorderRef.current = null
+    setRecording(false)
+    setRecordSecs(0)
+  }
+
+  // ── Start a new chat with a fresh number ───────────────────────────────────
+  async function handleStartChat() {
+    if (!newPhone.trim() || startingChat) return
+    setStartingChat(true)
+    try {
+      const res = await fetch('/api/conversations/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: newPhone.trim(), name: newName.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error ?? 'Failed to start chat')
+        return
+      }
+      toast.success(data.existed ? 'Opening existing conversation' : 'Outreach message sent')
+      // Refresh list, open the conversation
+      await fetchConversations()
+      setSelectedConvId(data.conversationId)
+      setShowMobileChat(true)
+      setNewChatOpen(false)
+      setNewPhone('')
+      setNewName('')
+    } catch {
+      toast.error('Network error — could not start chat')
+    } finally {
+      setStartingChat(false)
     }
   }
 
@@ -429,6 +779,17 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
 
   const currentConv = conversations.find((c) => c.id === selectedConvId)
 
+  // 24-hour customer-care window: WhatsApp only delivers free-form (non-template)
+  // messages if the contact messaged within the last 24h. Derive it from the
+  // newest inbound message so we can warn the agent before they send.
+  const lastInboundAt = messages.reduce<string | null>((acc, m) => {
+    if (m.direction !== 'inbound') return acc
+    if (!acc || new Date(m.sent_at).getTime() > new Date(acc).getTime()) return m.sent_at
+    return acc
+  }, null)
+  const windowOpen =
+    !!lastInboundAt && Date.now() - new Date(lastInboundAt).getTime() < 24 * 60 * 60 * 1000
+
   // ─── Conversation List Panel ──────────────────────────────────────────────
   const ConversationListPanel = (
     <div className={cn(
@@ -440,6 +801,15 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
       <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
         <h1 className="text-base font-bold text-zinc-900">Chats</h1>
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={() => setNewChatOpen(true)}
+            title="New chat"
+          >
+            <Plus className="size-4 text-zinc-500" />
+          </Button>
           <Button variant="ghost" size="icon" className="size-7" onClick={fetchConversations} title="Refresh">
             <RefreshCw className="size-4 text-zinc-500" />
           </Button>
@@ -696,10 +1066,30 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
                   <div
                     key={msg.id}
                     className={cn(
-                      'flex message-enter',
+                      'group flex items-center gap-1 message-enter',
                       isInbound ? 'justify-start' : 'justify-end'
                     )}
                   >
+                    {!isInbound && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          className="shrink-0 rounded-full p-1 text-zinc-400 opacity-0 transition hover:bg-black/5 hover:text-zinc-600 focus-visible:opacity-100 group-hover:opacity-100 data-[popup-open]:opacity-100"
+                          title="Message actions"
+                        >
+                          <MoreVertical className="size-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-36">
+                          {(msg.content_type as string) === 'text' && (
+                            <DropdownMenuItem onClick={() => openEditMessage(msg)}>
+                              <Pencil className="size-4" /> Edit
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem variant="destructive" onClick={() => setDeletingMsg(msg)}>
+                            <Trash2 className="size-4" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                     <div
                       className={cn(
                         'relative max-w-[75%] rounded-lg px-3 py-2 text-sm shadow-sm',
@@ -730,11 +1120,16 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
                           )}
                         </div>
                       )}
-                      <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                      <MessageBody msg={msg} />
                       <div className={cn(
                         'flex items-center gap-1 mt-1',
                         isInbound ? 'justify-start' : 'justify-end'
                       )}>
+                        {Boolean((msg.metadata as { edited?: boolean } | null)?.edited) && (
+                          <span className="text-[10px] italic" style={{ color: 'var(--wa-text-tertiary)' }}>
+                            edited
+                          </span>
+                        )}
                         <span className="text-[10px]" style={{ color: 'var(--wa-text-tertiary)' }}>
                           {format(new Date(msg.sent_at), 'h:mm a')}
                         </span>
@@ -755,6 +1150,23 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
               borderColor: 'var(--wa-border)',
             }}
           >
+            {/* 24-hour window notice — free messages won't deliver when closed */}
+            {selectedConvId && messages.length > 0 && !windowOpen && (
+              <div className="mb-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] leading-relaxed text-amber-800">
+                <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-500" />
+                <span>
+                  <span className="font-medium">24-hour reply window closed.</span>{' '}
+                  {lastInboundAt
+                    ? `${currentConv?.contact?.name ?? 'This contact'} hasn't replied in over 24 hours, `
+                    : `${currentConv?.contact?.name ?? 'This contact'} hasn't messaged you yet, `}
+                  so WhatsApp won&apos;t deliver a normal message. Send the approved template via{' '}
+                  <button onClick={() => setNewChatOpen(true)} className="font-medium underline underline-offset-2 hover:text-amber-900">
+                    New chat
+                  </button>{' '}
+                  to re-open it — free replies unlock for 24h once they message back.
+                </span>
+              </div>
+            )}
             {/* AI status bar */}
             <div className="flex items-center justify-between mb-2 text-xs text-zinc-500">
               <div className="flex items-center gap-2">
@@ -787,44 +1199,265 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
                 )}
               </div>
             </div>
-            <div className="flex items-end gap-2">
-              <textarea
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSend()
-                  }
-                }}
-                placeholder="Type a message..."
-                rows={1}
-                disabled={sending}
-                className="flex-1 resize-none rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-all disabled:opacity-50"
-                style={{ maxHeight: '120px', overflowY: 'auto' }}
-              />
-              <Button
-                size="icon"
-                onClick={handleSend}
-                disabled={!messageText.trim() || sending}
-                className="size-9 shrink-0"
-              >
-                {sending
-                  ? <RefreshCw className="size-4 animate-spin" />
-                  : <Send className="size-4" />
-                }
-              </Button>
-            </div>
+            {/* Pending attachment preview */}
+            {pendingFile && (
+              <div className="mb-2 flex items-center gap-3 rounded-lg border border-zinc-200 bg-white/60 p-2">
+                {pendingKind === 'image' ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={pendingUrl} alt="preview" className="size-12 rounded object-cover" />
+                ) : (
+                  <div className="flex items-center gap-2 flex-1">
+                    <Mic className="size-4 text-zinc-500 shrink-0" />
+                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    <audio controls src={pendingUrl} className="h-8 flex-1" />
+                  </div>
+                )}
+                <span className="flex-1 truncate text-xs text-zinc-500">
+                  {pendingKind === 'image' ? (pendingFile.name || 'Image') : 'Voice message'}
+                </span>
+                <Button variant="ghost" size="icon" className="size-7 shrink-0" onClick={clearPending} disabled={sending}>
+                  <X className="size-4 text-zinc-500" />
+                </Button>
+              </div>
+            )}
+
+            {/* Hidden file input for images */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickImage(f) }}
+            />
+
+            {recording ? (
+              // Recording bar
+              <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+                <span className="flex items-center gap-2 text-sm text-red-600 font-medium flex-1">
+                  <span className="size-2.5 rounded-full bg-red-500 animate-pulse" />
+                  Recording… {String(Math.floor(recordSecs / 60)).padStart(2, '0')}:{String(recordSecs % 60).padStart(2, '0')}
+                </span>
+                <Button variant="ghost" size="icon" className="size-9" onClick={() => stopRecording(false)} title="Cancel">
+                  <X className="size-4 text-zinc-500" />
+                </Button>
+                <Button size="icon" className="size-9" onClick={() => stopRecording(true)} title="Stop & attach">
+                  <Square className="size-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-end gap-2">
+                {/* Attach image */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-9 shrink-0"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={sending}
+                  title="Attach image"
+                >
+                  <ImageIcon className="size-4 text-zinc-500" />
+                </Button>
+                <textarea
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSend()
+                    }
+                  }}
+                  placeholder={pendingKind === 'image' ? 'Add a caption…' : 'Type a message...'}
+                  rows={1}
+                  disabled={sending}
+                  className="flex-1 resize-none rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-all disabled:opacity-50"
+                  style={{ maxHeight: '120px', overflowY: 'auto' }}
+                />
+                {/* Voice note (when nothing typed and no pending) OR Send */}
+                {!messageText.trim() && !pendingFile ? (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-9 shrink-0"
+                    onClick={startRecording}
+                    disabled={sending}
+                    title="Record voice note"
+                  >
+                    <Mic className="size-4 text-zinc-500" />
+                  </Button>
+                ) : (
+                  <Button
+                    size="icon"
+                    onClick={handleSend}
+                    disabled={(!messageText.trim() && !pendingFile) || sending}
+                    className="size-9 shrink-0"
+                  >
+                    {sending
+                      ? <RefreshCw className="size-4 animate-spin" />
+                      : <Send className="size-4" />
+                    }
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </>
       )}
     </div>
   )
 
+  // ─── New Chat Dialog ──────────────────────────────────────────────────────
+  const previewName = newName.trim() || 'there'
+  // Mirrors the approved `ad_lead_message` template body (renderOutreachPreview in lib/whatsapp.ts).
+  const messagePreview = `Hi ${previewName}, this is ${OUTREACH_AGENT_DISPLAY} from Nexora Lab. I saw your enquiry and wanted to personally reach out. What do you want to Automate, We Help business to Grow with AI Agents.`
+
+  const NewChatDialog = (
+    <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
+      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+        {/* Header */}
+        <DialogHeader className="flex-row items-center gap-3 space-y-0 border-b border-zinc-100 px-5 py-4">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-wa-green/10 text-wa-green">
+            <Send className="size-[18px]" />
+          </div>
+          <div className="min-w-0 space-y-0.5">
+            <DialogTitle className="text-[15px] font-semibold text-zinc-900">Start a new chat</DialogTitle>
+            <DialogDescription className="text-[12.5px] leading-snug text-zinc-500">
+              Reach out to a number that hasn&apos;t messaged you yet.
+            </DialogDescription>
+          </div>
+        </DialogHeader>
+
+        {/* Body */}
+        <div className="space-y-4 px-5 py-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="new-name" className="text-[13px] font-medium text-zinc-700">
+                Name <span className="font-normal text-zinc-400">(optional)</span>
+              </Label>
+              <Input
+                id="new-name"
+                placeholder="Rahul Sharma"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className="h-10"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="new-phone" className="text-[13px] font-medium text-zinc-700">Phone number</Label>
+              <Input
+                id="new-phone"
+                inputMode="tel"
+                placeholder="+91 98765 43210"
+                value={newPhone}
+                onChange={(e) => setNewPhone(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleStartChat() }}
+                className="h-10"
+              />
+            </div>
+          </div>
+          <p className="-mt-1.5 text-[11.5px] text-zinc-400">
+            With or without +91 — Indian numbers are auto-formatted.
+          </p>
+
+          {/* Message preview */}
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400">Message preview</p>
+            <div className="rounded-lg bg-[var(--wa-chat-bg)] p-3">
+              <div className="max-w-[85%] rounded-lg rounded-tl-sm bg-white px-3 py-2 text-[13px] leading-relaxed text-zinc-800 shadow-sm">
+                {messagePreview}
+              </div>
+            </div>
+          </div>
+
+          {/* Info callout */}
+          <div className="flex gap-2.5 rounded-lg border border-wa-green/15 bg-wa-green/5 p-3">
+            <Sparkles className="mt-0.5 size-4 shrink-0 text-wa-green" />
+            <p className="text-[12px] leading-relaxed text-zinc-600">
+              WhatsApp requires an approved template for the first message, so we send{' '}
+              <span className="font-medium text-zinc-800">ad_lead_message</span> automatically. The moment they reply, the AI takes over the conversation.
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-2 border-t border-zinc-100 bg-zinc-50/70 px-5 py-3.5">
+          <Button variant="outline" onClick={() => setNewChatOpen(false)} disabled={startingChat}>
+            Cancel
+          </Button>
+          <Button onClick={handleStartChat} disabled={!newPhone.trim() || startingChat} className="gap-1.5" size="lg">
+            {startingChat
+              ? <><RefreshCw className="size-4 animate-spin" /> Sending…</>
+              : <><Send className="size-4" /> Send message</>
+            }
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+
+  // ─── Edit Message Dialog ──────────────────────────────────────────────────
+  const EditMessageDialog = (
+    <Dialog open={!!editingMsg} onOpenChange={(o) => { if (!o) { setEditingMsg(null); setEditText('') } }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit message</DialogTitle>
+          <DialogDescription>
+            This updates the message in your CRM only. WhatsApp can&apos;t change a message that was already delivered to the contact.
+          </DialogDescription>
+        </DialogHeader>
+        <textarea
+          value={editText}
+          onChange={(e) => setEditText(e.target.value)}
+          rows={4}
+          autoFocus
+          className="w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm leading-relaxed outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveEdit() }}
+        />
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => { setEditingMsg(null); setEditText('') }} disabled={savingEdit}>
+            Cancel
+          </Button>
+          <Button onClick={handleSaveEdit} disabled={!editText.trim() || savingEdit} className="gap-1.5">
+            {savingEdit ? <><RefreshCw className="size-4 animate-spin" /> Saving…</> : 'Save changes'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+
+  // ─── Delete Message Dialog ────────────────────────────────────────────────
+  const DeleteMessageDialog = (
+    <Dialog open={!!deletingMsg} onOpenChange={(o) => { if (!o) setDeletingMsg(null) }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Delete message?</DialogTitle>
+          <DialogDescription>
+            This removes the message from your CRM. The contact keeps the copy already delivered on WhatsApp. This can&apos;t be undone.
+          </DialogDescription>
+        </DialogHeader>
+        {deletingMsg?.content && (
+          <p className="line-clamp-3 rounded-lg border border-zinc-100 bg-zinc-50 p-2.5 text-[13px] text-zinc-600">
+            {deletingMsg.content}
+          </p>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setDeletingMsg(null)} disabled={deletingBusy}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={handleConfirmDelete} disabled={deletingBusy} className="gap-1.5">
+            {deletingBusy ? <><RefreshCw className="size-4 animate-spin" /> Deleting…</> : <><Trash2 className="size-4" /> Delete</>}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+
   return (
     <div className="flex h-[calc(100dvh-4rem)] md:h-dvh overflow-hidden">
       {ConversationListPanel}
       {ChatWindowPanel}
+      {NewChatDialog}
+      {EditMessageDialog}
+      {DeleteMessageDialog}
     </div>
   )
 }

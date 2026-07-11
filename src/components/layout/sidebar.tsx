@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   LayoutDashboard,
   MessageSquare,
+  Megaphone,
   Target,
   Users,
   CalendarDays,
@@ -27,6 +28,7 @@ import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 const NAV_ITEMS = [
   { label: 'Dashboard',     href: 'dashboard',      icon: LayoutDashboard },
   { label: 'Chats',         href: 'chats',           icon: MessageSquare },
+  { label: 'Broadcast',     href: 'broadcast',       icon: Megaphone },
   { label: 'Leads',         href: 'leads',           icon: Target },
   { label: 'Contacts',      href: 'contacts',        icon: Users },
   { label: 'Appointments',  href: 'appointments',    icon: CalendarDays },

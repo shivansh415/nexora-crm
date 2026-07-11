@@ -47,6 +47,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Contact phone number not found' }, { status: 404 })
     }
 
+    // 2b. Enforce WhatsApp's 24-hour customer-care window.
+    // A free-form (non-template) message is only DELIVERED if the contact has
+    // messaged us within the last 24h. Outside that window Meta still returns
+    // HTTP 200 with a message id (so it looks "sent") but silently drops it.
+    // We block it here so the agent gets an honest, actionable error instead of
+    // a message that never arrives.
+    const { data: lastInbound } = await supabase
+      .from('messages')
+      .select('timestamp, created_at')
+      .eq('conversation_id', conversationId)
+      .eq('direction', 'inbound')
+      .order('timestamp', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    const lastInboundAt = lastInbound?.[0]?.timestamp ?? lastInbound?.[0]?.created_at ?? null
+    const withinWindow =
+      !!lastInboundAt && Date.now() - new Date(lastInboundAt).getTime() < 24 * 60 * 60 * 1000
+
+    if (!withinWindow) {
+      return NextResponse.json(
+        {
+          error: lastInboundAt
+            ? "This contact hasn't replied in the last 24 hours, so WhatsApp won't deliver a normal message. Send the approved template (New chat) to re-open the chat — free replies work for 24h after they message back."
+            : "This contact hasn't messaged you yet, so WhatsApp won't deliver a normal message. Use New chat to send the approved template first — free replies unlock once they reply.",
+          code: 'WINDOW_CLOSED',
+          windowClosed: true,
+        },
+        { status: 409 }
+      )
+    }
+
     // 3. Send via Meta WhatsApp Cloud API directly
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
     const accessToken = process.env.WHATSAPP_ACCESS_TOKEN

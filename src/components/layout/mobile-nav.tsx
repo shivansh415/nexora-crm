@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   MessageSquare,
+  Megaphone,
   Target,
   BarChart3,
   MoreHorizontal,
@@ -32,6 +33,7 @@ const BOTTOM_NAV = [
 
 const MORE_ITEMS = [
   { label: 'Dashboard',     href: 'dashboard',      icon: LayoutDashboard },
+  { label: 'Broadcast',     href: 'broadcast',      icon: Megaphone },
   { label: 'Contacts',      href: 'contacts',       icon: Users },
   { label: 'Appointments',  href: 'appointments',   icon: CalendarDays },
   { label: 'Enquiries',     href: 'enquiries',      icon: Inbox },
