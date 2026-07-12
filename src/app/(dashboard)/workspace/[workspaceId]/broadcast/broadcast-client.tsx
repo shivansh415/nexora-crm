@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 
-type PreviewStatus = 'new' | 'duplicate' | 'invalid'
+type PreviewStatus = 'new' | 'duplicate' | 'invalid' | 'unreachable'
 
 interface PreviewRow {
   rowNumber: number
@@ -20,7 +20,7 @@ interface PreviewRow {
 interface PreviewResponse {
   ok: boolean
   detectedColumns: { name: string | null; phone: string | null }
-  summary: { total: number; toSend: number; duplicates: number; invalid: number }
+  summary: { total: number; toSend: number; duplicates: number; invalid: number; unreachable: number }
   rows: PreviewRow[]
 }
 
@@ -43,6 +43,7 @@ const STATUS_STYLES: Record<PreviewStatus, string> = {
   new: 'bg-green-100 text-green-700',
   duplicate: 'bg-amber-100 text-amber-700',
   invalid: 'bg-red-100 text-red-700',
+  unreachable: 'bg-red-100 text-red-700',
 }
 
 export default function BroadcastClient({ workspaceId }: { workspaceId: string }) {
@@ -189,10 +190,11 @@ export default function BroadcastClient({ workspaceId }: { workspaceId: string }
           </div>
 
           {/* Summary cards */}
-          <div className="mb-4 grid grid-cols-4 gap-3">
+          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
             <SummaryCard label="Total rows" value={preview.summary.total} />
             <SummaryCard label="Will send" value={preview.summary.toSend} accent="green" />
             <SummaryCard label="Skipped (dupes)" value={preview.summary.duplicates} accent="amber" />
+            <SummaryCard label="Not on WhatsApp" value={preview.summary.unreachable} accent="red" />
             <SummaryCard label="Invalid" value={preview.summary.invalid} accent="red" />
           </div>
 

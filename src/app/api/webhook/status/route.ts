@@ -24,6 +24,37 @@ function getSupabase() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
+// Marks a conversation's contact as unreachable on WhatsApp so future broadcasts
+// skip it and the preview can flag it as "Not on WhatsApp".
+async function flagContactUnreachable(
+  supabase: ReturnType<typeof getSupabase>,
+  conversationId: string
+) {
+  const { data: conv } = await supabase
+    .from('conversations')
+    .select('contact_id')
+    .eq('id', conversationId)
+    .limit(1)
+    .single()
+  const contactId = conv?.contact_id
+  if (!contactId) return
+
+  const { data: contact } = await supabase
+    .from('contacts')
+    .select('metadata')
+    .eq('id', contactId)
+    .limit(1)
+    .single()
+  const existingMeta = (typeof contact?.metadata === 'object' && contact.metadata) ? contact.metadata : {}
+
+  await supabase
+    .from('contacts')
+    .update({
+      metadata: { ...existingMeta, wa_reachable: false, wa_unreachable_at: new Date().toISOString() },
+    })
+    .eq('id', contactId)
+}
+
 // Meta uses GET for webhook verification (shared with the messages field).
 export async function GET(req: NextRequest) {
   const params = req.nextUrl.searchParams
@@ -45,14 +76,17 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => ({}))
-    const updates: { id: string; status: string }[] = []
+    const updates: { id: string; status: string; errorInfo?: { code: number; title: string } }[] = []
 
     // Shape 1 — raw Meta webhook
     if (Array.isArray(body?.entry)) {
       for (const entry of body.entry) {
         for (const change of entry?.changes ?? []) {
           for (const s of change?.value?.statuses ?? []) {
-            if (s?.id && s?.status) updates.push({ id: s.id, status: String(s.status) })
+            if (s?.id && s?.status) {
+              const errorInfo = s?.errors?.[0] ? { code: s.errors[0].code, title: s.errors[0].title } : undefined
+              updates.push({ id: s.id, status: String(s.status), errorInfo })
+            }
           }
         }
       }
@@ -61,13 +95,15 @@ export async function POST(req: NextRequest) {
     if (Array.isArray(body?.statuses)) {
       for (const s of body.statuses) {
         const id = s?.id ?? s?.wa_message_id
-        if (id && s?.status) updates.push({ id, status: String(s.status) })
+        const errorInfo = s?.errors?.[0] ? { code: s.errors[0].code, title: s.errors[0].title } : undefined
+        if (id && s?.status) updates.push({ id, status: String(s.status), errorInfo })
       }
     }
     // Shape 3 — flat
     const flatId = body?.wa_message_id ?? body?.id
     if (flatId && body?.status && !Array.isArray(body?.entry)) {
-      updates.push({ id: flatId, status: String(body.status) })
+      const errorInfo = body?.errors?.[0] ? { code: body.errors[0].code, title: body.errors[0].title } : undefined
+      updates.push({ id: flatId, status: String(body.status), errorInfo })
     }
 
     if (updates.length === 0) {
@@ -83,7 +119,7 @@ export async function POST(req: NextRequest) {
 
       const { data: rows } = await supabase
         .from('messages')
-        .select('id, status')
+        .select('id, status, metadata, conversation_id')
         .eq('wa_message_id', u.id)
         .limit(1)
 
@@ -94,11 +130,24 @@ export async function POST(req: NextRequest) {
       // Never downgrade (except allow failed to always land).
       if (status !== 'failed' && STATUS_RANK[status] < currentRank) continue
 
+      const updatePayload: Record<string, unknown> = { status }
+      // If this is a failure, store the error reason in metadata so the UI can show it.
+      if (status === 'failed' && u.errorInfo) {
+        const existingMeta = (typeof row.metadata === 'object' && row.metadata) ? row.metadata : {}
+        updatePayload.metadata = { ...existingMeta, failureCode: u.errorInfo.code, failureReason: u.errorInfo.title }
+      }
+
       const { error } = await supabase
         .from('messages')
-        .update({ status })
+        .update(updatePayload)
         .eq('id', row.id)
       if (!error) updated++
+
+      // If Meta reports the number is not on WhatsApp / undeliverable (code 131026),
+      // flag the contact so future broadcasts skip it and show "Not on WhatsApp".
+      if (status === 'failed' && u.errorInfo?.code === 131026 && row.conversation_id) {
+        await flagContactUnreachable(supabase, row.conversation_id)
+      }
     }
 
     return NextResponse.json({ ok: true, updated })

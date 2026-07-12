@@ -35,7 +35,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
   DropdownMenu,
@@ -193,6 +192,10 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
   const [savingEdit, setSavingEdit] = useState(false)
   const [deletingMsg, setDeletingMsg] = useState<Message | null>(null)
   const [deletingBusy, setDeletingBusy] = useState(false)
+
+  // ── Delete whole conversation ──
+  const [deleteConvOpen, setDeleteConvOpen] = useState(false)
+  const [deletingConv, setDeletingConv] = useState(false)
 
   // ── Media attachment / voice recording ──
   const [pendingFile, setPendingFile] = useState<File | null>(null)
@@ -578,6 +581,34 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
     }
   }
 
+  async function handleDeleteConversation() {
+    if (!selectedConvId || deletingConv) return
+    const id = selectedConvId
+    setDeletingConv(true)
+    try {
+      const res = await fetch('/api/conversations/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: id }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error ?? 'Failed to delete chat')
+        return
+      }
+      toast.success('Chat deleted')
+      setConversations((prev) => prev.filter((c) => c.id !== id))
+      setSelectedConvId(null)
+      setMessages([])
+      setShowMobileChat(false)
+      setDeleteConvOpen(false)
+    } catch {
+      toast.error('Network error — could not delete chat')
+    } finally {
+      setDeletingConv(false)
+    }
+  }
+
   // ── Media: pick image ──────────────────────────────────────────────────────
   function onPickImage(file: File) {
     if (!file.type.startsWith('image/')) {
@@ -851,7 +882,7 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
       </div>
 
       {/* Conversations */}
-      <ScrollArea className="flex-1">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-4">
             <RefreshCw className="size-6 text-zinc-300 animate-spin mb-3" />
@@ -915,7 +946,7 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
             </button>
           ))
         )}
-      </ScrollArea>
+      </div>
     </div>
   )
 
@@ -989,7 +1020,9 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
                   <DropdownMenuItem>Add Note</DropdownMenuItem>
                   <DropdownMenuItem>Assign Agent</DropdownMenuItem>
                   <DropdownMenuItem>Archive</DropdownMenuItem>
-                  <DropdownMenuItem className="text-red-600">Block Contact</DropdownMenuItem>
+                  <DropdownMenuItem variant="destructive" onClick={() => setDeleteConvOpen(true)}>
+                    <Trash2 className="size-4" /> Delete chat
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -1458,6 +1491,24 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
       {NewChatDialog}
       {EditMessageDialog}
       {DeleteMessageDialog}
+      <Dialog open={deleteConvOpen} onOpenChange={(o) => { if (!o) setDeleteConvOpen(false) }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete this chat?</DialogTitle>
+            <DialogDescription>
+              This permanently deletes the entire conversation and all its messages from your database. This frees up storage and can&apos;t be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDeleteConvOpen(false)} disabled={deletingConv}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConversation} disabled={deletingConv} className="gap-1.5">
+              {deletingConv ? <><RefreshCw className="size-4 animate-spin" /> Deleting…</> : <><Trash2 className="size-4" /> Delete chat</>}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -32,7 +32,7 @@ function findColumn(headers: string[], candidates: string[]): string | null {
   return null
 }
 
-export type PreviewStatus = 'new' | 'duplicate' | 'invalid'
+export type PreviewStatus = 'new' | 'duplicate' | 'invalid' | 'unreachable'
 
 export interface PreviewRow {
   rowNumber: number
@@ -116,13 +116,23 @@ export async function POST(req: NextRequest) {
       const supabase = getSupabase()
       const { data: existing } = await supabase
         .from('contacts')
-        .select('phone_number')
+        .select('phone_number, metadata')
         .eq('workspace_id', WORKSPACE_ID)
         .in('phone_number', validPhones)
 
       const existingSet = new Set((existing ?? []).map((c: { phone_number: string }) => c.phone_number))
+      // Phones already known to be NOT on WhatsApp (flagged when a prior send failed with code 131026)
+      const unreachableSet = new Set(
+        (existing ?? [])
+          .filter((c: { metadata?: { wa_reachable?: boolean } | null }) => c.metadata?.wa_reachable === false)
+          .map((c: { phone_number: string }) => c.phone_number)
+      )
       for (const r of preview) {
-        if (r.status === 'new' && r.phone && existingSet.has(r.phone)) {
+        if (r.status !== 'new' || !r.phone) continue
+        if (unreachableSet.has(r.phone)) {
+          r.status = 'unreachable'
+          r.reason = 'Not on WhatsApp'
+        } else if (existingSet.has(r.phone)) {
           r.status = 'duplicate'
           r.reason = 'already in CRM'
         }
@@ -134,6 +144,7 @@ export async function POST(req: NextRequest) {
       toSend: preview.filter((r) => r.status === 'new').length,
       duplicates: preview.filter((r) => r.status === 'duplicate').length,
       invalid: preview.filter((r) => r.status === 'invalid').length,
+      unreachable: preview.filter((r) => r.status === 'unreachable').length,
     }
 
     return NextResponse.json({

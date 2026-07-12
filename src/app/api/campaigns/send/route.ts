@@ -74,14 +74,16 @@ export async function POST(req: NextRequest) {
       // Skip if contact already exists (already-in-CRM leads should not be re-messaged)
       const { data: existingContacts } = await supabase
         .from('contacts')
-        .select('id')
+        .select('id, metadata')
         .eq('workspace_id', WORKSPACE_ID)
         .eq('phone_number', phone)
         .limit(1)
 
       if (existingContacts && existingContacts.length > 0) {
         skipped++
-        report.push({ name, phone, status: 'skipped', reason: 'already in CRM' })
+        const meta = existingContacts[0].metadata as { wa_reachable?: boolean } | null
+        const reason = meta?.wa_reachable === false ? 'Not on WhatsApp' : 'already in CRM'
+        report.push({ name, phone, status: 'skipped', reason })
         continue
       }
 
