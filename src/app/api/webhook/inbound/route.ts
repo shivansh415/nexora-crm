@@ -216,8 +216,9 @@ export async function POST(request: NextRequest) {
       .update({ lead_score: score, tags, updated_at: new Date().toISOString() })
       .eq('id', contactId)
 
-    // Update lead stage based on engagement  
-    if (!isNewContact && msgCount && msgCount >= 3) {
+    // Auto-move to 'contacted' the moment the lead sends ANY inbound message.
+    // (Existing 'qualified'/'won'/'lost' stages are preserved.)
+    if (!isNewContact) {
       const { data: existingLead } = await supabase
         .from('leads')
         .select('id, stage')

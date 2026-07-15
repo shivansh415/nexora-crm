@@ -36,10 +36,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 
 const STAGES: { id: LeadStatus; label: string; color: string; border: string }[] = [
-  { id: 'new', label: 'New Lead', color: 'bg-zinc-400', border: 'border-zinc-300' },
+  { id: 'new', label: 'New', color: 'bg-zinc-400', border: 'border-zinc-300' },
   { id: 'contacted', label: 'Contacted', color: 'bg-blue-500', border: 'border-blue-200' },
   { id: 'qualified', label: 'Qualified', color: 'bg-amber-500', border: 'border-amber-200' },
-  { id: 'proposal', label: 'Proposal Sent', color: 'bg-purple-500', border: 'border-purple-200' },
   { id: 'won', label: 'Won', color: 'bg-green-500', border: 'border-green-200' },
 ]
 
@@ -91,18 +90,43 @@ export default function PipelineBoard({ workspaceId, leads: initialLeads }: Pipe
     setDragOver(stage)
   }
 
-  function handleDrop(stage: LeadStatus) {
+  async function handleDrop(stage: LeadStatus) {
     if (!dragging) return
+    const leadId = dragging
+    const prevStatus = leads.find((l) => l.id === leadId)?.status
+    // Optimistic update
     setLeads((prev) =>
-      prev.map((l) =>
-        l.id === dragging
-          ? { ...l, status: stage, pipeline_stage: stage }
-          : l
-      )
+      prev.map((l) => (l.id === leadId ? { ...l, status: stage, pipeline_stage: stage } : l))
     )
     setDragging(null)
     setDragOver(null)
-    toast.success(`Lead moved to ${stage}`)
+
+    try {
+      const res = await fetch('/api/leads/update-stage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId, stage }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error ?? 'Failed to update stage')
+        // Revert
+        if (prevStatus) {
+          setLeads((prev) =>
+            prev.map((l) => (l.id === leadId ? { ...l, status: prevStatus, pipeline_stage: prevStatus } : l))
+          )
+        }
+        return
+      }
+      toast.success(`Moved to ${stage}`)
+    } catch {
+      toast.error('Network error — reverted')
+      if (prevStatus) {
+        setLeads((prev) =>
+          prev.map((l) => (l.id === leadId ? { ...l, status: prevStatus, pipeline_stage: prevStatus } : l))
+        )
+      }
+    }
   }
 
   function updateLeadNote(leadId: string, notes: string) {
@@ -141,9 +165,6 @@ export default function PipelineBoard({ workspaceId, leads: initialLeads }: Pipe
               <List className="size-4" />
             </button>
           </div>
-          <Button size="sm" className="gap-1.5">
-            <Plus className="size-3.5" /> New Lead
-          </Button>
         </div>
       </div>
 
@@ -235,9 +256,6 @@ export default function PipelineBoard({ workspaceId, leads: initialLeads }: Pipe
                       )}
                     </div>
                   </ScrollArea>
-                  <button className="flex items-center gap-1.5 rounded-b-lg border-t border-zinc-200 px-3 py-2 text-xs text-zinc-500 hover:bg-zinc-100 transition-colors">
-                    <Plus className="size-3" /> Add lead
-                  </button>
                 </div>
               )
             })}
@@ -464,12 +482,21 @@ export default function PipelineBoard({ workspaceId, leads: initialLeads }: Pipe
 
                   {/* Actions */}
                   <div className="flex gap-2 pt-2">
-                    <Button className="flex-1" size="sm">
-                      <ExternalLink className="size-3.5 mr-1.5" /> View Chat
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <Calendar className="size-3.5 mr-1.5" /> Book Appointment
-                    </Button>
+                    {selectedLead.conversation_id ? (
+                      <a
+                        href={`/workspace/${workspaceId}/chats/${selectedLead.conversation_id}`}
+                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                      >
+                        <ExternalLink className="size-3.5" /> Open Chat
+                      </a>
+                    ) : (
+                      <a
+                        href={`/workspace/${workspaceId}/chats`}
+                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 py-2 text-xs font-medium hover:bg-accent transition-colors"
+                      >
+                        <ExternalLink className="size-3.5" /> Go to Chats
+                      </a>
+                    )}
                   </div>
                 </div>
               </ScrollArea>

@@ -1,0 +1,282 @@
+{
+  "name": "Nexora - Calendar to CRM + Sheet Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerOn": "eventCreated",
+        "calendarId": {
+          "__rl": true,
+          "value": "shivanshpatidar516@gmail.com",
+          "mode": "list",
+          "cachedResultName": "shivanshpatidar516@gmail.com"
+        },
+        "options": {},
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTrigger",
+      "typeVersion": 1,
+      "position": [
+        400,
+        400
+      ],
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "Calendar Event Created",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Hanh4lJpWlWb5Im7",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the newly created Google Calendar event into CRM/Sheet fields.\n// The AI's book_calendar node writes summary = \"Property Site Visit - <Name>\"\n// and a description containing Name, Phone, Requirement, Location, Budget.\ntry {\n  const e = $input.first().json;\n  const summary = e.summary || '';\n  const description = e.description || '';\n  const eventId = e.id || '';\n  const startTime = e.start?.dateTime || e.start?.date || '';\n\n  // Name — text after the first \" - \" in the summary\n  let name = '';\n  const parts = summary.split(' - ');\n  if (parts.length > 1) name = parts.slice(1).join(' - ').trim();\n\n  // Phone — first 10–12 digit run found in the description\n  let phone = '';\n  const candidates = (description.match(/\\d[\\d\\s\\-]{8,}\\d/g) || []).map((s) => s.replace(/\\D/g, ''));\n  for (const d of candidates) {\n    if (d.length === 10) { phone = '91' + d; break; }\n    if (d.length >= 11 && d.length <= 12) { phone = d; break; }\n  }\n\n  const notes = description.replace(/\\s+/g, ' ').trim().slice(0, 300);\n\n  return [{ json: { eventId, name, phone, startTime, notes, hasPhone: !!phone } }];\n} catch (err) {\n  return [{ json: { eventId: '', name: '', phone: '', startTime: '', notes: '', hasPhone: false, error: String(err && err.message ? err.message : err) } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        400
+      ],
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "Parse Event"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-phone",
+              "leftValue": "={{ $json.hasPhone }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        400
+      ],
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "Has Phone?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://nexora-crm-chi.vercel.app/api/webhook/appointment",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-webhook-secret",
+              "value": "nnhA4Z3hz77E"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"action\": \"book\",\n  \"phone\": \"{{ $json.phone }}\",\n  \"name\": \"{{ $json.name }}\",\n  \"startTime\": \"{{ $json.startTime }}\",\n  \"googleEventId\": \"{{ $json.eventId }}\",\n  \"notes\": {{ JSON.stringify($json.notes) }}\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1120,
+        304
+      ],
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "Sync to CRM",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1x9EMBAlJlNs0MO0cY-wANP3X9wDuAErGzRG7zFSioRY",
+          "mode": "list",
+          "cachedResultName": "Nexora lab",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1x9EMBAlJlNs0MO0cY-wANP3X9wDuAErGzRG7zFSioRY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1x9EMBAlJlNs0MO0cY-wANP3X9wDuAErGzRG7zFSioRY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Phone Number": "={{ $json.phone }}",
+            "Booking Time": "={{ $json.startTime }}",
+            "Event ID": "={{ $json.eventId }}",
+            "Interested": "Yes"
+          },
+          "matchingColumns": [
+            "Phone Number"
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Requirements",
+              "displayName": "Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Interested",
+              "displayName": "Interested",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Booking Time",
+              "displayName": "Booking Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Event ID",
+              "displayName": "Event ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1120,
+        496
+      ],
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "Update Sheet Booking",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "QT5DUMKZrjL3I1b0",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Calendar Event Created": {
+      "main": [
+        [
+          {
+            "node": "Parse Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Event": {
+      "main": [
+        [
+          {
+            "node": "Has Phone?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Phone?": {
+      "main": [
+        [
+          {
+            "node": "Sync to CRM",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update Sheet Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "tags": []
+}

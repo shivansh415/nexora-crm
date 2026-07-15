@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { useTheme } from 'next-themes'
 import { format } from 'date-fns'
-import { Download, BarChart3 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { BarChart3 } from 'lucide-react'
+import ExportCsvButton from '@/components/ui/export-csv-button'
 import {
   LineChart,
   Line,
@@ -115,9 +115,7 @@ export default function AnalyticsClient({ data }: AnalyticsClientProps) {
           <h1 className="text-xl font-bold text-zinc-900">Analytics</h1>
           <p className="text-xs text-zinc-500 mt-0.5">Performance overview</p>
         </div>
-        <Button variant="outline" size="sm" className="gap-1.5">
-          <Download className="size-3.5" /> Export
-        </Button>
+        <ExportCsvButton rows={chartData} filename={`analytics-${range.toLowerCase().replace(/\s+/g, '-')}`} label="Export" />
       </div>
 
       {/* Range Selector */}

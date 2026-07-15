@@ -45,7 +45,9 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogBody,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -1345,9 +1347,9 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
 
   const NewChatDialog = (
     <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+      <DialogContent className="sm:max-w-md">
         {/* Header */}
-        <DialogHeader className="flex-row items-center gap-3 space-y-0 border-b border-zinc-100 px-5 py-4">
+        <DialogHeader className="flex-row items-center gap-3 space-y-0">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-wa-green/10 text-wa-green">
             <Send className="size-[18px]" />
           </div>
@@ -1360,7 +1362,7 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
         </DialogHeader>
 
         {/* Body */}
-        <div className="space-y-4 px-5 py-4">
+        <DialogBody className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="new-name" className="text-[13px] font-medium text-zinc-700">
@@ -1409,10 +1411,10 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
               <span className="font-medium text-zinc-800">ad_lead_message</span> automatically. The moment they reply, the AI takes over the conversation.
             </p>
           </div>
-        </div>
+        </DialogBody>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 border-t border-zinc-100 bg-zinc-50/70 px-5 py-3.5">
+        <DialogFooter>
           <Button variant="outline" onClick={() => setNewChatOpen(false)} disabled={startingChat}>
             Cancel
           </Button>
@@ -1422,7 +1424,7 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
               : <><Send className="size-4" /> Send message</>
             }
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -1437,22 +1439,24 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
             This updates the message in your CRM only. WhatsApp can&apos;t change a message that was already delivered to the contact.
           </DialogDescription>
         </DialogHeader>
-        <textarea
-          value={editText}
-          onChange={(e) => setEditText(e.target.value)}
-          rows={4}
-          autoFocus
-          className="w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm leading-relaxed outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveEdit() }}
-        />
-        <div className="flex justify-end gap-2">
+        <DialogBody>
+          <textarea
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            rows={4}
+            autoFocus
+            className="w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm leading-relaxed outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveEdit() }}
+          />
+        </DialogBody>
+        <DialogFooter>
           <Button variant="outline" onClick={() => { setEditingMsg(null); setEditText('') }} disabled={savingEdit}>
             Cancel
           </Button>
           <Button onClick={handleSaveEdit} disabled={!editText.trim() || savingEdit} className="gap-1.5">
             {savingEdit ? <><RefreshCw className="size-4 animate-spin" /> Saving…</> : 'Save changes'}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -1468,18 +1472,20 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
           </DialogDescription>
         </DialogHeader>
         {deletingMsg?.content && (
-          <p className="line-clamp-3 rounded-lg border border-zinc-100 bg-zinc-50 p-2.5 text-[13px] text-zinc-600">
-            {deletingMsg.content}
-          </p>
+          <DialogBody>
+            <p className="line-clamp-3 rounded-lg border border-zinc-100 bg-zinc-50 p-2.5 text-[13px] text-zinc-600 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300">
+              {deletingMsg.content}
+            </p>
+          </DialogBody>
         )}
-        <div className="flex justify-end gap-2">
+        <DialogFooter>
           <Button variant="outline" onClick={() => setDeletingMsg(null)} disabled={deletingBusy}>
             Cancel
           </Button>
           <Button variant="destructive" onClick={handleConfirmDelete} disabled={deletingBusy} className="gap-1.5">
             {deletingBusy ? <><RefreshCw className="size-4 animate-spin" /> Deleting…</> : <><Trash2 className="size-4" /> Delete</>}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -1499,14 +1505,14 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
               This permanently deletes the entire conversation and all its messages from your database. This frees up storage and can&apos;t be undone.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end gap-2">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConvOpen(false)} disabled={deletingConv}>
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteConversation} disabled={deletingConv} className="gap-1.5">
               {deletingConv ? <><RefreshCw className="size-4 animate-spin" /> Deleting…</> : <><Trash2 className="size-4" /> Delete chat</>}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,9 +1,9 @@
 import { format, formatDistanceToNow } from 'date-fns'
-import { Download, Filter, ExternalLink, MessageSquare } from 'lucide-react'
+import { ExternalLink, MessageSquare } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import ExportCsvButton from '@/components/ui/export-csv-button'
 
 interface PageProps {
   params: Promise<{ workspaceId: string }>
@@ -71,6 +71,27 @@ export default async function EnquiriesPage({ params }: PageProps) {
 
   const total = showFromLeads ? safeLeads.length : safeEnquiries.length
 
+  // Flatten for CSV export
+  const exportRows = showFromLeads
+    ? safeLeads.map((l) => ({
+        Name: l.contacts?.name ?? '',
+        Phone: l.contacts?.phone_number ?? '',
+        Email: l.contacts?.email ?? '',
+        Requirements: l.requirements ?? l.notes ?? '',
+        Stage: l.stage,
+        Source: 'WhatsApp',
+        Received: new Date(l.created_at).toLocaleString('en-IN'),
+      }))
+    : safeEnquiries.map((e) => ({
+        Name: e.name ?? '',
+        Phone: e.phone_number ?? '',
+        Email: e.email ?? '',
+        Requirements: e.notes ?? '',
+        Stage: e.status,
+        Source: e.source ?? '',
+        Received: new Date(e.created_at).toLocaleString('en-IN'),
+      }))
+
   return (
     <div className="p-6 max-w-7xl">
       {/* Header */}
@@ -79,14 +100,7 @@ export default async function EnquiriesPage({ params }: PageProps) {
           <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Enquiries</h1>
           <p className="text-xs text-zinc-500 mt-0.5">All inbound leads and enquiries from WhatsApp</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5">
-            <Filter className="size-3.5" /> Filter
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5">
-            <Download className="size-3.5" /> Export CSV
-          </Button>
-        </div>
+        <ExportCsvButton rows={exportRows} filename="enquiries" />
       </div>
 
       {/* Quick Stats */}

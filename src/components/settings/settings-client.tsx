@@ -7,13 +7,10 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import {
   Bell,
-  Trash2,
   CheckCircle2,
-  AlertTriangle,
   Zap,
   Info,
   Smartphone,
-  ExternalLink,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -32,6 +29,7 @@ interface WorkspaceData {
   google_calendar_connected?: boolean
   google_sheets_connected?: boolean
   whatsapp_phone_number_id?: string | null
+  settings?: { notification_prefs?: Record<string, boolean> } | null
 }
 
 interface SettingsClientProps {
@@ -39,19 +37,74 @@ interface SettingsClientProps {
   workspace?: WorkspaceData | null
 }
 
+const DEFAULT_NOTIFS = {
+  new_message: true,
+  human_takeover: true,
+  new_appointment: true,
+  new_lead: false,
+}
+
 export default function SettingsClient({ workspaceId, workspace }: SettingsClientProps) {
   const [activeTab, setActiveTab] = useState('general')
   const [n8nUrl, setN8nUrl] = useState(workspace?.n8n_webhook_url ?? '')
   const [savingN8n, setSavingN8n] = useState(false)
-  const [notifs, setNotifs] = useState({
-    new_message: true,
-    human_takeover: true,
-    new_appointment: true,
-    new_lead: false,
-  })
 
-  function toggleNotif(key: keyof typeof notifs) {
-    setNotifs((prev) => ({ ...prev, [key]: !prev[key] }))
+  // General settings — editable state so Save actually persists them
+  const [wsName, setWsName] = useState(workspace?.name ?? '')
+  const [wsBusinessType, setWsBusinessType] = useState(workspace?.business_type?.replace('_', ' ') ?? '')
+  const [wsTimezone, setWsTimezone] = useState(workspace?.timezone ?? '')
+  const [savingGeneral, setSavingGeneral] = useState(false)
+
+  const [notifs, setNotifs] = useState<typeof DEFAULT_NOTIFS>({
+    ...DEFAULT_NOTIFS,
+    ...(workspace?.settings?.notification_prefs as Partial<typeof DEFAULT_NOTIFS> | undefined),
+  })
+  const [savingNotifs, setSavingNotifs] = useState(false)
+
+  async function saveGeneral() {
+    setSavingGeneral(true)
+    try {
+      const res = await fetch('/api/workspace/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workspaceId,
+          name: wsName,
+          business_type: wsBusinessType,
+          timezone: wsTimezone,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error ?? 'Failed to save'); return }
+      toast.success('Settings saved')
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setSavingGeneral(false)
+    }
+  }
+
+  async function toggleNotif(key: keyof typeof notifs) {
+    const next = { ...notifs, [key]: !notifs[key] }
+    setNotifs(next)
+    setSavingNotifs(true)
+    try {
+      const res = await fetch('/api/workspace/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspaceId, notification_prefs: next }),
+      })
+      if (!res.ok) {
+        // Revert if the server didn't accept it
+        setNotifs(notifs)
+        toast.error('Failed to save preference')
+      }
+    } catch {
+      setNotifs(notifs)
+      toast.error('Network error')
+    } finally {
+      setSavingNotifs(false)
+    }
   }
 
   async function saveN8nUrl() {
@@ -123,38 +176,24 @@ export default function SettingsClient({ workspaceId, workspace }: SettingsClien
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label className="text-xs text-zinc-600 dark:text-zinc-400">Workspace Name</Label>
-                <Input defaultValue={workspace?.name} />
+                <Input value={wsName} onChange={(e) => setWsName(e.target.value)} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs text-zinc-600 dark:text-zinc-400">Business Type</Label>
-                <Input defaultValue={workspace?.business_type?.replace('_', ' ')} />
+                <Input value={wsBusinessType} onChange={(e) => setWsBusinessType(e.target.value)} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs text-zinc-600 dark:text-zinc-400">Timezone</Label>
-                <Input defaultValue={workspace?.timezone} />
+                <Input value={wsTimezone} onChange={(e) => setWsTimezone(e.target.value)} placeholder="Asia/Kolkata" />
               </div>
             </div>
             <div className="flex justify-end pt-1">
-              <Button size="sm" onClick={() => toast.success('Settings saved!')}>Save Changes</Button>
+              <Button size="sm" onClick={saveGeneral} disabled={savingGeneral}>
+                {savingGeneral ? 'Saving…' : 'Save Changes'}
+              </Button>
             </div>
           </div>
 
-          {/* Danger zone */}
-          <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20 p-5">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="size-4 text-red-500 shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <h3 className="text-sm font-semibold text-red-700 dark:text-red-400">Danger Zone</h3>
-                <p className="text-xs text-red-600 dark:text-red-500 mt-0.5">
-                  Permanently delete this workspace and all its data. This cannot be undone.
-                </p>
-                <Button variant="destructive" size="sm" className="mt-3">
-                  <Trash2 className="size-3.5 mr-1.5" />
-                  Delete Workspace
-                </Button>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
@@ -241,13 +280,13 @@ export default function SettingsClient({ workspaceId, workspace }: SettingsClien
             {
               name: 'Google Calendar',
               icon: '📅',
-              desc: 'Sync appointments to Google Calendar and receive reminders',
+              desc: 'AI books site visits into Google Calendar. Managed via n8n Google Calendar credential.',
               connected: workspace?.google_calendar_connected,
             },
             {
               name: 'Google Sheets',
               icon: '📊',
-              desc: 'Sync leads and enquiries from Google Sheets automatically',
+              desc: 'Leads are captured to Google Sheets in real time. Managed via n8n Google Sheets credential.',
               connected: workspace?.google_sheets_connected,
             },
           ].map((integration) => (
@@ -264,16 +303,9 @@ export default function SettingsClient({ workspaceId, workspace }: SettingsClien
                   </div>
                 </div>
                 <div className="shrink-0">
-                  {integration.connected ? (
-                    <span className="flex items-center gap-1.5 rounded-full bg-green-50 dark:bg-green-950/40 px-3 py-1 text-xs font-medium text-green-700 dark:text-green-400">
-                      <CheckCircle2 className="size-3" /> Connected
-                    </span>
-                  ) : (
-                    <Button variant="outline" size="sm">
-                      <ExternalLink className="size-3 mr-1.5" />
-                      Connect
-                    </Button>
-                  )}
+                  <span className="flex items-center gap-1.5 rounded-full bg-green-50 dark:bg-green-950/40 px-3 py-1 text-xs font-medium text-green-700 dark:text-green-400">
+                    <CheckCircle2 className="size-3" /> Managed via n8n
+                  </span>
                 </div>
               </div>
             </div>

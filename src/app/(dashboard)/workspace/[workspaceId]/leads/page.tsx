@@ -13,11 +13,11 @@ export default async function LeadsPage({ params }: PageProps) {
 
   const { data: leads } = await supabase
     .from('leads')
-    .select('id, workspace_id, contact_id, title, stage, priority, deal_value, currency, budget_min, budget_max, location_pref, notes, tags, created_at, updated_at, contacts(id, name, phone_number, email, tags, lead_score)')
+    .select('id, workspace_id, contact_id, conversation_id, title, stage, priority, deal_value, currency, budget_min, budget_max, location_pref, notes, tags, created_at, updated_at, contacts(id, name, phone_number, email, tags, lead_score)')
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false }) as {
       data: Array<{
-        id: string; workspace_id: string; contact_id: string; title: string;
+        id: string; workspace_id: string; contact_id: string; conversation_id: string | null; title: string;
         stage: string; priority: string; deal_value: number | null; currency: string;
         budget_min: number | null; budget_max: number | null; location_pref: string | null;
         notes: string | null; tags: string[]; created_at: string; updated_at: string;
@@ -30,9 +30,10 @@ export default async function LeadsPage({ params }: PageProps) {
     id: l.id,
     workspace_id: l.workspace_id,
     contact_id: l.contact_id,
-    conversation_id: null,
+    conversation_id: l.conversation_id,
     title: l.title,
-    status: l.stage as 'new' | 'contacted' | 'qualified' | 'proposal' | 'won' | 'lost',
+    // Coerce legacy 'proposal' stage into 'qualified' since Proposal has been removed
+    status: (l.stage === 'proposal' ? 'qualified' : l.stage) as 'new' | 'contacted' | 'qualified' | 'won' | 'lost',
     pipeline_stage: l.stage,
     pipeline_order: 0,
     value: l.deal_value,

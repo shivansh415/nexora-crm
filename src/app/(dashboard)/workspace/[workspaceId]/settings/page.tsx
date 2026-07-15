@@ -13,7 +13,7 @@ export default async function SettingsPage({ params }: PageProps) {
 
   const { data: workspace } = await supabase
     .from('workspaces')
-    .select('id, name, business_type, timezone, n8n_webhook_url, google_calendar_connected, google_sheets_connected, whatsapp_phone_number_id')
+    .select('id, name, business_type, timezone, n8n_webhook_url, google_calendar_connected, google_sheets_connected, whatsapp_phone_number_id, settings')
     .eq('id', workspaceId)
     .single() as {
       data: {
