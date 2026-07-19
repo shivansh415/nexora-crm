@@ -66,7 +66,7 @@ export default function LoginForm() {
       {/* ── Left Panel ────────────────────────────────────────────────────── */}
       <div
         className="relative overflow-hidden md:w-[45%] md:min-h-screen flex-shrink-0"
-        style={{ background: 'linear-gradient(160deg, #075e54 0%, #128c7e 45%, #00a884 80%, #25d366 100%)' }}
+        style={{ background: 'linear-gradient(160deg, #7c2d12 0%, #c2410c 38%, #ea580c 68%, #fb923c 100%)' }}
       >
         {/* ── MOBILE: compact top banner ─────────────────────────────────── */}
         <div className="flex items-center gap-3 px-5 py-4 md:hidden">
@@ -89,9 +89,9 @@ export default function LoginForm() {
             <div className="absolute -top-12 -right-12 size-64 rounded-full bg-white/10" />
             <div className="absolute -bottom-16 -left-8 size-48 rounded-full bg-white/10" />
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="absolute rounded-full opacity-20"
+              <div key={i} className="absolute rounded-full opacity-25"
                 style={{
-                  backgroundColor: '#25d366',
+                  backgroundColor: '#ffedd5',
                   width: `${[8,12,6,10,14,8][i]}px`, height: `${[8,12,6,10,14,8][i]}px`,
                   top: `${[15,35,55,70,45,80][i]}%`, left: `${[80,15,90,40,60,70][i]}%`,
                 }}
@@ -159,12 +159,12 @@ export default function LoginForm() {
             <div
               className="mb-5 rounded-xl px-4 py-3 text-xs border"
               style={{
-                backgroundColor: 'rgba(0,168,132,0.08)',
-                borderColor: 'rgba(0,168,132,0.3)',
+                backgroundColor: 'rgba(249,115,22,0.08)',
+                borderColor: 'rgba(249,115,22,0.3)',
                 color: 'var(--wa-text-secondary)',
               }}
             >
-              <strong style={{ color: 'var(--wa-green)' }}>Demo Mode</strong> — Any email/password enters the dashboard.
+              <strong style={{ color: 'var(--brand)' }}>Demo Mode</strong> — Any email/password enters the dashboard.
               Add real keys in <code className="rounded px-1" style={{ backgroundColor: 'var(--wa-surface-2)' }}>.env.local</code> to enable auth.
             </div>
           )}
@@ -187,7 +187,7 @@ export default function LoginForm() {
                 placeholder="you@example.com" required
                 className="w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all"
                 style={{ backgroundColor: 'var(--wa-surface)', borderColor: 'var(--wa-border)', color: 'var(--wa-text-primary)' }}
-                onFocus={(e) => (e.target.style.borderColor = 'var(--wa-green)')}
+                onFocus={(e) => (e.target.style.borderColor = 'var(--brand)')}
                 onBlur={(e) => (e.target.style.borderColor = 'var(--wa-border)')}
               />
             </div>
@@ -202,7 +202,7 @@ export default function LoginForm() {
                   placeholder="Enter your password" required
                   className="w-full rounded-xl border px-4 py-3 pr-12 text-sm outline-none transition-all"
                   style={{ backgroundColor: 'var(--wa-surface)', borderColor: 'var(--wa-border)', color: 'var(--wa-text-primary)' }}
-                  onFocus={(e) => (e.target.style.borderColor = 'var(--wa-green)')}
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--brand)')}
                   onBlur={(e) => (e.target.style.borderColor = 'var(--wa-border)')}
                 />
                 <button type="button" onClick={() => setShowPass(!showPass)}
@@ -215,7 +215,7 @@ export default function LoginForm() {
 
             {/* Forgot password */}
             <div className="flex justify-end">
-              <Link href="/forgot-password" className="text-xs font-medium hover:underline" style={{ color: 'var(--wa-green)' }}>
+              <Link href="/forgot-password" className="text-xs font-medium hover:underline" style={{ color: 'var(--brand)' }}>
                 Forgot password?
               </Link>
             </div>
@@ -234,7 +234,7 @@ export default function LoginForm() {
                 'flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition-all',
                 loading ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90 active:scale-[0.98]'
               )}
-              style={{ backgroundColor: 'var(--wa-green)' }}>
+              style={{ backgroundImage: 'var(--brand-gradient)', boxShadow: 'var(--brand-glow)' }}>
               {loading
                 ? <><Loader2 className="size-4 animate-spin" />Signing in...</>
                 : <><span>Sign in</span><ArrowRight className="size-4" /></>}
@@ -251,7 +251,7 @@ export default function LoginForm() {
           {/* Sign up link */}
           <p className="text-center text-sm" style={{ color: 'var(--wa-text-secondary)' }}>
             Don&apos;t have an account?{' '}
-            <Link href="/register" className="font-semibold hover:underline" style={{ color: 'var(--wa-green)' }}>
+            <Link href="/register" className="font-semibold hover:underline" style={{ color: 'var(--brand)' }}>
               Create account
             </Link>
           </p>
@@ -265,12 +265,12 @@ export default function LoginForm() {
             <a href="https://www.instagram.com/shivansh.js/" target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 transition-opacity hover:opacity-80">
               <svg viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8"
-                strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--wa-green)' }}>
+                strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--brand)' }}>
                 <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
                 <circle cx="12" cy="12" r="4" />
                 <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none" />
               </svg>
-              <span className="text-[11px] font-medium" style={{ color: 'var(--wa-green)' }}>@shivansh.js</span>
+              <span className="text-[11px] font-medium" style={{ color: 'var(--brand)' }}>@shivansh.js</span>
             </a>
           </div>
 

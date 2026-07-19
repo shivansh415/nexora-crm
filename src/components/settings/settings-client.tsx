@@ -11,6 +11,9 @@ import {
   Zap,
   Info,
   Smartphone,
+  Settings as SettingsIcon,
+  CalendarDays,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -143,11 +146,16 @@ export default function SettingsClient({ workspaceId, workspace }: SettingsClien
   return (
     <div className="p-6 max-w-3xl">
       {/* ── Header ──────────────────────────────────────────────────── */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Settings</h1>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-          Manage workspace configuration and integrations
-        </p>
+      <div className="mb-6 flex items-center gap-3 animate-fade-up">
+        <span className="flex size-11 items-center justify-center rounded-2xl text-white shadow-md" style={{ backgroundImage: 'var(--brand-gradient)' }}>
+          <SettingsIcon className="size-5" />
+        </span>
+        <div>
+          <h1 className="text-xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">Settings</h1>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+            Manage workspace configuration and integrations
+          </p>
+        </div>
       </div>
 
       {/* ── Tabs ─────────────────────────────────────────────────────── */}
@@ -157,9 +165,9 @@ export default function SettingsClient({ workspaceId, workspace }: SettingsClien
             key={id}
             onClick={() => setActiveTab(id)}
             className={cn(
-              'px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
+              'px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors',
               activeTab === id
-                ? 'border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100'
+                ? 'border-orange-500 text-orange-600 dark:text-orange-400'
                 : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
             )}
           >
@@ -171,7 +179,7 @@ export default function SettingsClient({ workspaceId, workspace }: SettingsClien
       {/* ── GENERAL ───────────────────────────────────────────────── */}
       {activeTab === 'general' && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-4">
+          <div className="rounded-2xl border border-zinc-200 shadow-sm dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-4">
             <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Workspace Information</h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
@@ -202,11 +210,13 @@ export default function SettingsClient({ workspaceId, workspace }: SettingsClien
         <div className="space-y-4">
 
           {/* n8n — primary integration (prominent card) */}
-          <div className="rounded-xl border-2 border-zinc-900 dark:border-zinc-100 bg-white dark:bg-zinc-900 p-5 space-y-4">
+          <div className="space-y-4 rounded-2xl border-2 border-orange-300 bg-white p-5 shadow-sm dark:border-orange-500/40 dark:bg-zinc-900">
             <div className="flex items-center gap-2">
-              <Zap className="size-4 text-zinc-900 dark:text-zinc-100" />
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">n8n Webhook</h3>
-              <span className="ml-auto rounded-full bg-zinc-900 dark:bg-zinc-100 px-2 py-0.5 text-[10px] font-bold text-white dark:text-zinc-900">
+              <span className="flex size-7 items-center justify-center rounded-lg text-white" style={{ backgroundImage: 'var(--brand-gradient)' }}>
+                <Zap className="size-4" />
+              </span>
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">n8n Webhook</h3>
+              <span className="ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ backgroundImage: 'var(--brand-gradient)' }}>
                 REQUIRED
               </span>
             </div>
@@ -251,7 +261,7 @@ export default function SettingsClient({ workspaceId, workspace }: SettingsClien
           </div>
 
           {/* WhatsApp info — read-only, managed by n8n */}
-          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-3">
+          <div className="rounded-2xl border border-zinc-200 shadow-sm dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-3">
             <div className="flex items-center gap-2">
               <Smartphone className="size-4 text-green-500" />
               <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">WhatsApp Business</h3>
@@ -279,43 +289,50 @@ export default function SettingsClient({ workspaceId, workspace }: SettingsClien
           {[
             {
               name: 'Google Calendar',
-              icon: '📅',
+              icon: CalendarDays,
+              tint: 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400',
               desc: 'AI books site visits into Google Calendar. Managed via n8n Google Calendar credential.',
               connected: workspace?.google_calendar_connected,
             },
             {
               name: 'Google Sheets',
-              icon: '📊',
+              icon: FileSpreadsheet,
+              tint: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400',
               desc: 'Leads are captured to Google Sheets in real time. Managed via n8n Google Sheets credential.',
               connected: workspace?.google_sheets_connected,
             },
-          ].map((integration) => (
-            <div
-              key={integration.name}
-              className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-2xl shrink-0">{integration.icon}</span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{integration.name}</p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{integration.desc}</p>
+          ].map((integration) => {
+            const Icon = integration.icon
+            return (
+              <div
+                key={integration.name}
+                className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition-all hover:border-orange-200 dark:border-zinc-800 dark:bg-zinc-900"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className={cn('flex size-10 shrink-0 items-center justify-center rounded-xl', integration.tint)}>
+                      <Icon className="size-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{integration.name}</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{integration.desc}</p>
+                    </div>
+                  </div>
+                  <div className="shrink-0">
+                    <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                      <CheckCircle2 className="size-3" /> Managed via n8n
+                    </span>
                   </div>
                 </div>
-                <div className="shrink-0">
-                  <span className="flex items-center gap-1.5 rounded-full bg-green-50 dark:bg-green-950/40 px-3 py-1 text-xs font-medium text-green-700 dark:text-green-400">
-                    <CheckCircle2 className="size-3" /> Managed via n8n
-                  </span>
-                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
       {/* ── NOTIFICATIONS ─────────────────────────────────────────── */}
       {activeTab === 'notifications' && (
-        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 divide-y divide-zinc-50 dark:divide-zinc-800">
+        <div className="rounded-2xl border border-zinc-200 shadow-sm dark:border-zinc-800 bg-white dark:bg-zinc-900 divide-y divide-zinc-50 dark:divide-zinc-800">
           <div className="px-5 py-4">
             <div className="flex items-center gap-2">
               <Bell className="size-4 text-zinc-500 dark:text-zinc-400" />
@@ -343,7 +360,7 @@ export default function SettingsClient({ workspaceId, workspace }: SettingsClien
                   onChange={() => toggleNotif(item.key)}
                   className="sr-only peer"
                 />
-                <div className="peer h-6 w-11 rounded-full bg-zinc-200 dark:bg-zinc-700 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-all after:content-[''] peer-checked:bg-zinc-900 dark:peer-checked:bg-zinc-100 peer-checked:after:translate-x-5" />
+                <div className="peer h-6 w-11 rounded-full bg-zinc-200 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-all after:content-[''] peer-checked:bg-orange-500 peer-checked:after:translate-x-5 dark:bg-zinc-700" />
               </label>
             </div>
           ))}

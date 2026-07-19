@@ -6,7 +6,9 @@ import {
   CalendarDays,
   Bot,
   ArrowRight,
+  Inbox,
   Zap,
+  Sparkles,
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
@@ -22,8 +24,8 @@ const PIPELINE_STAGES = [
   { id: 'new', label: 'New', color: 'bg-zinc-400' },
   { id: 'contacted', label: 'Contacted', color: 'bg-blue-500' },
   { id: 'qualified', label: 'Qualified', color: 'bg-amber-500' },
-  { id: 'proposal', label: 'Proposal', color: 'bg-purple-500' },
-  { id: 'won', label: 'Won', color: 'bg-green-500' },
+  { id: 'proposal', label: 'Proposal', color: 'bg-violet-500' },
+  { id: 'won', label: 'Won', color: 'bg-emerald-500' },
 ]
 
 function getInitials(name: string) {
@@ -135,115 +137,135 @@ export default async function DashboardPage({ params }: PageProps) {
     timeZone: 'Asia/Kolkata', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
   }).format(new Date())
 
+  // ── Stat card config ──
+  const stats = [
+    {
+      label: 'New Chats Today',
+      value: String(totalNewChatsToday),
+      href: 'chats',
+      icon: MessageSquare,
+      accent: 'brand' as const,
+      trend: { positive: convDelta >= 0, text: `${convDelta >= 0 ? '+' : ''}${convDelta} vs yesterday` },
+    },
+    {
+      label: 'Active Leads',
+      value: String(activeLeads),
+      href: 'leads',
+      icon: Target,
+      accent: 'amber' as const,
+      trend: { positive: true, text: `+${newLeadsToday ?? 0} new today` },
+    },
+    {
+      label: 'Upcoming Appointments',
+      value: String(appointmentCount ?? 0),
+      href: 'appointments',
+      icon: CalendarDays,
+      accent: 'blue' as const,
+      trend: null,
+    },
+    {
+      label: 'AI Response Rate',
+      value: `${aiRate}%`,
+      href: 'analytics',
+      icon: Bot,
+      accent: 'green' as const,
+      trend: { positive: true, text: 'AI handling replies' },
+    },
+  ]
+
+  const accentStyles: Record<string, { icon: string; glow: string; iconStyle?: React.CSSProperties }> = {
+    brand: { icon: 'text-white shadow-md', glow: 'bg-orange-500/15', iconStyle: { backgroundImage: 'var(--brand-gradient)' } },
+    amber: { icon: 'bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400', glow: 'bg-amber-400/15' },
+    blue:  { icon: 'bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400', glow: 'bg-blue-400/15' },
+    green: { icon: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400', glow: 'bg-emerald-400/15' },
+  }
+
   return (
-    <div className="p-6 max-w-7xl">
+    <div className="mx-auto max-w-7xl p-5 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-          {greeting}, Admin 👋
-        </h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          {dateStr}
-        </p>
+      <div className="mb-7 flex flex-wrap items-end justify-between gap-4 animate-fade-up">
+        <div>
+          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-[11px] font-semibold text-orange-700 dark:border-orange-500/25 dark:bg-orange-500/10 dark:text-orange-300">
+            <Sparkles className="size-3" />
+            AI Command Center
+          </div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-[28px]">
+            {greeting}, Admin
+          </h1>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{dateStr}</p>
+        </div>
+        <Link
+          href={`/workspace/${workspaceId}/broadcast`}
+          className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg"
+          style={{ backgroundImage: 'var(--brand-gradient)', boxShadow: 'var(--brand-glow)' }}
+        >
+          <Zap className="size-4" />
+          New Broadcast
+        </Link>
       </div>
 
       {/* Stat Cards */}
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {/* Messages Today */}
-        <Link href={`/workspace/${workspaceId}/chats`} className="group">
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 transition-shadow hover:shadow-sm">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">New Chats Today</p>
-                <p className="mt-2 text-3xl font-bold text-zinc-900 dark:text-zinc-100">{totalNewChatsToday}</p>
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 stagger">
+        {stats.map((stat) => {
+          const a = accentStyles[stat.accent]
+          const Icon = stat.icon
+          return (
+            <Link key={stat.label} href={`/workspace/${workspaceId}/${stat.href}`} className="group">
+              <div className="relative h-full overflow-hidden rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg dark:border-zinc-800">
+                <div className={cn('pointer-events-none absolute -right-8 -top-8 size-28 rounded-full blur-2xl', a.glow)} />
+                <div className="relative flex items-start justify-between">
+                  <div className={cn('flex size-11 items-center justify-center rounded-xl', a.icon)} style={a.iconStyle}>
+                    <Icon className="size-[20px]" strokeWidth={2.2} />
+                  </div>
+                  {stat.trend && (
+                    <span className={cn(
+                      'inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold',
+                      stat.trend.positive
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
+                        : 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400'
+                    )}>
+                      {stat.trend.positive ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
+                      {stat.trend.text}
+                    </span>
+                  )}
+                </div>
+                <p className="relative mt-4 text-[34px] font-extrabold leading-none tracking-tight text-zinc-900 tabular-nums dark:text-zinc-100">
+                  {stat.value}
+                </p>
+                <p className="relative mt-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  {stat.label}
+                </p>
               </div>
-              <div className="flex size-9 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800">
-                <MessageSquare className="size-4 text-zinc-500" />
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1 text-xs">
-              {convDelta >= 0 ? <TrendingUp className="size-3 text-green-600" /> : <TrendingDown className="size-3 text-red-500" />}
-              <span className={convDelta >= 0 ? 'text-green-600 font-medium' : 'text-red-500 font-medium'}>
-                {convDelta >= 0 ? '+' : ''}{convDelta} vs yesterday
-              </span>
-            </div>
-          </div>
-        </Link>
-
-        {/* Active Leads */}
-        <Link href={`/workspace/${workspaceId}/leads`} className="group">
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 transition-shadow hover:shadow-sm">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Active Leads</p>
-                <p className="mt-2 text-3xl font-bold text-zinc-900 dark:text-zinc-100">{activeLeads}</p>
-              </div>
-              <div className="flex size-9 items-center justify-center rounded-lg bg-amber-50">
-                <Target className="size-4 text-amber-500" />
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1 text-xs">
-              <TrendingUp className="size-3 text-green-600" />
-              <span className="text-green-600 font-medium">+{newLeadsToday ?? 0} new today</span>
-            </div>
-          </div>
-        </Link>
-
-        {/* Appointments */}
-        <Link href={`/workspace/${workspaceId}/appointments`} className="group">
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 transition-shadow hover:shadow-sm">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Upcoming Appointments</p>
-                <p className="mt-2 text-3xl font-bold text-zinc-900 dark:text-zinc-100">{appointmentCount ?? 0}</p>
-              </div>
-              <div className="flex size-9 items-center justify-center rounded-lg bg-blue-50">
-                <CalendarDays className="size-4 text-blue-500" />
-              </div>
-            </div>
-          </div>
-        </Link>
-
-        {/* AI Response Rate */}
-        <Link href={`/workspace/${workspaceId}/analytics`} className="group">
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 transition-shadow hover:shadow-sm">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">AI Response Rate</p>
-                <p className="mt-2 text-3xl font-bold text-zinc-900 dark:text-zinc-100">{aiRate}%</p>
-              </div>
-              <div className="flex size-9 items-center justify-center rounded-lg bg-green-50">
-                <Bot className="size-4 text-green-600" />
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1 text-xs">
-              <TrendingUp className="size-3 text-green-600" />
-              <span className="text-green-600 font-medium">AI handling responses</span>
-            </div>
-          </div>
-        </Link>
+            </Link>
+          )
+        })}
       </div>
 
       {/* Bottom Grid */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         {/* Recent Conversations */}
         <div className="lg:col-span-2">
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 px-5 py-3.5">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+          <div className="h-full overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800">
+            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
+              <h2 className="flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
+                  <MessageSquare className="size-3.5" />
+                </span>
                 Recent Conversations
-                <span className="ml-2 rounded-full bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-xs font-normal text-zinc-500">{safeConversations.length}</span>
+                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-semibold text-zinc-500 dark:bg-zinc-800">{safeConversations.length}</span>
               </h2>
-              <Link href={`/workspace/${workspaceId}/chats`} className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-900 transition-colors">
-                View all <ArrowRight className="size-3" />
+              <Link href={`/workspace/${workspaceId}/chats`} className="group flex items-center gap-1 text-xs font-semibold text-orange-600 transition-colors hover:text-orange-700 dark:text-orange-400">
+                View all <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>
             <div className="divide-y divide-zinc-50 dark:divide-zinc-800">
               {safeConversations.length === 0 ? (
-                <div className="py-12 text-center">
-                  <MessageSquare className="size-8 text-zinc-200 mx-auto mb-2" />
-                  <p className="text-sm text-zinc-400">No conversations yet</p>
-                  <p className="text-xs text-zinc-300 mt-1">Conversations will appear here when customers message you</p>
+                <div className="py-16 text-center">
+                  <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-zinc-100 dark:bg-zinc-800">
+                    <MessageSquare className="size-6 text-zinc-400" />
+                  </div>
+                  <p className="text-sm font-medium text-zinc-500">No conversations yet</p>
+                  <p className="mt-1 text-xs text-zinc-400">Conversations appear here when customers message you</p>
                 </div>
               ) : (
                 safeConversations.map((conv) => {
@@ -253,16 +275,16 @@ export default async function DashboardPage({ params }: PageProps) {
                     <Link
                       key={conv.id}
                       href={`/workspace/${workspaceId}/chats/${conv.id}`}
-                      className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                      className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-orange-50/40 dark:hover:bg-zinc-800/50"
                     >
-                      <Avatar className="size-9 shrink-0">
-                        <AvatarFallback className="text-xs font-medium bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300">
+                      <Avatar className="size-10 shrink-0">
+                        <AvatarFallback className="text-xs font-bold text-white" style={{ backgroundImage: 'var(--brand-gradient)' }}>
                           {getInitials(contactName)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                          <p className={cn('truncate text-sm', conv.unread_count > 0 ? 'font-semibold text-zinc-900 dark:text-zinc-100' : 'font-medium text-zinc-700 dark:text-zinc-300')}>
+                          <p className={cn('truncate text-sm', conv.unread_count > 0 ? 'font-bold text-zinc-900 dark:text-zinc-100' : 'font-semibold text-zinc-700 dark:text-zinc-300')}>
                             {contactName}
                           </p>
                           <span className="shrink-0 text-[11px] text-zinc-400">
@@ -273,10 +295,12 @@ export default async function DashboardPage({ params }: PageProps) {
                           <p className="flex-1 truncate text-xs text-zinc-500 dark:text-zinc-400">{conv.last_message_preview}</p>
                           <div className="flex items-center gap-1 shrink-0">
                             {isAI && (
-                              <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">AI</span>
+                              <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400">
+                                <Sparkles className="size-2.5" /> AI
+                              </span>
                             )}
                             {conv.unread_count > 0 && (
-                              <span className="flex size-4 items-center justify-center rounded-full bg-zinc-900 text-[9px] font-bold text-white">
+                              <span className="flex size-4 items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ backgroundImage: 'var(--brand-gradient)' }}>
                                 {conv.unread_count}
                               </span>
                             )}
@@ -292,55 +316,71 @@ export default async function DashboardPage({ params }: PageProps) {
         </div>
 
         {/* Right Column */}
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-5">
           {/* Pipeline Summary */}
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 px-5 py-3.5">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Pipeline</h2>
-              <Link href={`/workspace/${workspaceId}/leads`} className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-900 transition-colors">
-                View all <ArrowRight className="size-3" />
+          <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800">
+            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
+              <h2 className="flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
+                  <Target className="size-3.5" />
+                </span>
+                Pipeline
+              </h2>
+              <Link href={`/workspace/${workspaceId}/leads`} className="group flex items-center gap-1 text-xs font-semibold text-orange-600 transition-colors hover:text-orange-700 dark:text-orange-400">
+                View all <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>
-            <div className="p-4 space-y-2">
+            <div className="space-y-3 p-5">
               {PIPELINE_STAGES.map((stage) => {
                 const count = safeLeads.filter((l) => l.stage === stage.id).length
                 const total = safeLeads.length || 1
                 const pct = Math.round((count / total) * 100)
                 return (
                   <div key={stage.id}>
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="font-medium text-zinc-700 dark:text-zinc-300">{stage.label}</span>
-                      <span className="text-zinc-500">{count}</span>
+                    <div className="mb-1.5 flex items-center justify-between text-xs">
+                      <span className="font-semibold text-zinc-700 dark:text-zinc-300">{stage.label}</span>
+                      <span className="font-semibold text-zinc-400 tabular-nums">{count}</span>
                     </div>
-                    <div className="h-1.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800">
-                      <div className={cn('h-1.5 rounded-full', stage.color)} style={{ width: `${pct}%` }} />
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                      <div className={cn('h-2 rounded-full transition-all duration-500', stage.color)} style={{ width: `${pct}%` }} />
                     </div>
                   </div>
                 )
               })}
               {safeLeads.length === 0 && (
-                <p className="text-xs text-zinc-400 text-center py-2">No leads yet</p>
+                <p className="py-2 text-center text-xs text-zinc-400">No leads yet</p>
               )}
             </div>
           </div>
 
-          {/* Quick Stats */}
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-            <div className="border-b border-zinc-100 dark:border-zinc-800 px-5 py-3.5">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Today&apos;s Activity</h2>
+          {/* Today's Activity */}
+          <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800">
+            <div className="border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
+              <h2 className="flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
+                  <Zap className="size-3.5" />
+                </span>
+                Today&apos;s Activity
+              </h2>
             </div>
-            <div className="p-4 space-y-3">
+            <div className="space-y-1 p-3">
               {[
-                { label: 'Inbound Messages', value: totalMsgToday, icon: '📩' },
-                { label: 'AI Replies', value: aiMsgToday ?? 0, icon: '🤖' },
-                { label: 'New Leads', value: newLeadsToday ?? 0, icon: '🎯' },
-                { label: 'Active Conversations', value: safeConversations.filter(c => c.status === 'active').length, icon: '💬' },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-500">{item.icon} {item.label}</span>
-                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{item.value}</span>
-                </div>
-              ))}
+                { label: 'Inbound Messages', value: totalMsgToday, icon: Inbox, tint: 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400' },
+                { label: 'AI Replies', value: aiMsgToday ?? 0, icon: Bot, tint: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' },
+                { label: 'New Leads', value: newLeadsToday ?? 0, icon: Target, tint: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400' },
+                { label: 'Active Conversations', value: safeConversations.filter(c => c.status === 'active').length, icon: MessageSquare, tint: 'bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400' },
+              ].map((item) => {
+                const Icon = item.icon
+                return (
+                  <div key={item.label} className="flex items-center gap-3 rounded-xl px-2.5 py-2 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                    <span className={cn('flex size-8 items-center justify-center rounded-lg', item.tint)}>
+                      <Icon className="size-4" />
+                    </span>
+                    <span className="flex-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">{item.label}</span>
+                    <span className="text-sm font-bold text-zinc-900 tabular-nums dark:text-zinc-100">{item.value}</span>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>

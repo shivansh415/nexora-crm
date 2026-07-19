@@ -1,5 +1,5 @@
 import { format, formatDistanceToNow } from 'date-fns'
-import { ExternalLink, MessageSquare } from 'lucide-react'
+import { ExternalLink, MessageSquare, MessageCircle, Inbox } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -12,10 +12,10 @@ interface PageProps {
 export const metadata = { title: 'Enquiries' }
 
 const STATUS_STYLES: Record<string, string> = {
-  new: 'bg-blue-100 text-blue-700',
-  contacted: 'bg-amber-100 text-amber-700',
-  qualified: 'bg-green-100 text-green-700',
-  closed: 'bg-zinc-100 text-zinc-500',
+  new: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400',
+  contacted: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400',
+  qualified: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400',
+  closed: 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400',
 }
 
 function getAdminSupabase() {
@@ -95,30 +95,35 @@ export default async function EnquiriesPage({ params }: PageProps) {
   return (
     <div className="p-6 max-w-7xl">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Enquiries</h1>
-          <p className="text-xs text-zinc-500 mt-0.5">All inbound leads and enquiries from WhatsApp</p>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 animate-fade-up">
+        <div className="flex items-center gap-3">
+          <span className="flex size-11 items-center justify-center rounded-2xl text-white shadow-md" style={{ backgroundImage: 'var(--brand-gradient)' }}>
+            <Inbox className="size-5" />
+          </span>
+          <div>
+            <h1 className="text-xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">Enquiries</h1>
+            <p className="text-xs text-zinc-500 mt-0.5">All inbound leads and enquiries from WhatsApp</p>
+          </div>
         </div>
         <ExportCsvButton rows={exportRows} filename="enquiries" />
       </div>
 
       {/* Quick Stats */}
-      <div className="mb-6 flex gap-4">
+      <div className="mb-6 grid grid-cols-3 gap-3 sm:max-w-xl">
         {[
-          { label: 'Today', value: todayCount },
-          { label: 'This Week', value: weekCount },
-          { label: 'Total', value: total },
+          { label: 'Today', value: todayCount, accent: true },
+          { label: 'This Week', value: weekCount, accent: false },
+          { label: 'Total', value: total, accent: false },
         ].map((stat) => (
-          <div key={stat.label} className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white dark:bg-zinc-900 dark:border-zinc-800 px-4 py-2.5">
-            <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{stat.value}</span>
-            <span className="text-xs text-zinc-500">{stat.label}</span>
+          <div key={stat.label} className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <span className={cn('block text-2xl font-extrabold tabular-nums', stat.accent ? 'text-orange-600 dark:text-orange-400' : 'text-zinc-900 dark:text-zinc-100')}>{stat.value}</span>
+            <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">{stat.label}</span>
           </div>
         ))}
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         {showFromLeads ? (
           // Show from leads table
           <>
@@ -132,7 +137,7 @@ export default async function EnquiriesPage({ params }: PageProps) {
               </thead>
               <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
                 {safeLeads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors">
+                  <tr key={lead.id} className="transition-colors hover:bg-orange-50/40 dark:hover:bg-zinc-800/60">
                     <td className="px-4 py-3">
                       <p className="font-medium text-zinc-900 dark:text-zinc-100 text-xs">{lead.contacts?.name ?? '—'}</p>
                     </td>
@@ -143,13 +148,13 @@ export default async function EnquiriesPage({ params }: PageProps) {
                         {lead.stage}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-zinc-500">📱 WhatsApp</td>
+                    <td className="px-4 py-3 text-xs text-zinc-500"><span className="inline-flex items-center gap-1.5"><MessageCircle className="size-3.5 text-emerald-500" /> WhatsApp</span></td>
                     <td className="px-4 py-3 text-xs text-zinc-400">
                       {formatDistanceToNow(new Date(lead.created_at), { addSuffix: true })}
                     </td>
                     <td className="px-4 py-3">
                       {lead.conversation_id && (
-                        <Link href={`/workspace/${workspaceId}/chats/${lead.conversation_id}`} className="text-zinc-400 hover:text-zinc-700">
+                        <Link href={`/workspace/${workspaceId}/chats/${lead.conversation_id}`} className="inline-flex text-zinc-400 transition-colors hover:text-orange-600">
                           <MessageSquare className="size-3.5" />
                         </Link>
                       )}
@@ -175,13 +180,13 @@ export default async function EnquiriesPage({ params }: PageProps) {
               </thead>
               <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
                 {safeEnquiries.map((enq) => (
-                  <tr key={enq.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors">
+                  <tr key={enq.id} className="transition-colors hover:bg-orange-50/40 dark:hover:bg-zinc-800/60">
                     <td className="px-4 py-3">
                       <p className="font-medium text-zinc-900 dark:text-zinc-100 text-xs">{enq.name}</p>
                     </td>
                     <td className="px-4 py-3 text-xs text-zinc-600 dark:text-zinc-400">{enq.phone_number}</td>
                     <td className="px-4 py-3 text-xs text-zinc-500">{enq.email ?? '—'}</td>
-                    <td className="px-4 py-3 text-xs text-zinc-600">📱 WhatsApp</td>
+                    <td className="px-4 py-3 text-xs text-zinc-600"><span className="inline-flex items-center gap-1.5"><MessageCircle className="size-3.5 text-emerald-500" /> WhatsApp</span></td>
                     <td className="px-4 py-3 text-xs text-zinc-500">
                       {enq.appointment_date ? format(new Date(enq.appointment_date), 'MMM d, h:mm a') : '—'}
                     </td>
@@ -193,7 +198,7 @@ export default async function EnquiriesPage({ params }: PageProps) {
                     <td className="px-4 py-3 text-xs text-zinc-500 max-w-[180px] truncate">{enq.notes ?? '—'}</td>
                     <td className="px-4 py-3">
                       {enq.conversation_id && (
-                        <Link href={`/workspace/${workspaceId}/chats/${enq.conversation_id}`} className="text-zinc-400 hover:text-zinc-700">
+                        <Link href={`/workspace/${workspaceId}/chats/${enq.conversation_id}`} className="inline-flex text-zinc-400 transition-colors hover:text-orange-600">
                           <ExternalLink className="size-3.5" />
                         </Link>
                       )}

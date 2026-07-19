@@ -17,24 +17,43 @@ import {
   ChevronUp,
   Building2,
   LogOut,
-  Sparkles,
   User,
   Check,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 
-const NAV_ITEMS = [
-  { label: 'Dashboard',     href: 'dashboard',      icon: LayoutDashboard },
-  { label: 'Chats',         href: 'chats',           icon: MessageSquare },
-  { label: 'Broadcast',     href: 'broadcast',       icon: Megaphone },
-  { label: 'Leads',         href: 'leads',           icon: Target },
-  { label: 'Contacts',      href: 'contacts',        icon: Users },
-  { label: 'Appointments',  href: 'appointments',    icon: CalendarDays },
-  { label: 'Enquiries',     href: 'enquiries',       icon: Inbox },
-  { label: 'Analytics',     href: 'analytics',       icon: BarChart3 },
-  { label: 'Settings',      href: 'settings',        icon: Settings },
+// Nav grouped into sections for clearer hierarchy (labels are display-only).
+const NAV_SECTIONS: { section: string; items: { label: string; href: string; icon: typeof LayoutDashboard }[] }[] = [
+  {
+    section: 'Overview',
+    items: [
+      { label: 'Dashboard', href: 'dashboard', icon: LayoutDashboard },
+    ],
+  },
+  {
+    section: 'Engage',
+    items: [
+      { label: 'Chats',        href: 'chats',        icon: MessageSquare },
+      { label: 'Broadcast',    href: 'broadcast',    icon: Megaphone },
+      { label: 'Enquiries',    href: 'enquiries',    icon: Inbox },
+    ],
+  },
+  {
+    section: 'Manage',
+    items: [
+      { label: 'Leads',        href: 'leads',        icon: Target },
+      { label: 'Contacts',     href: 'contacts',     icon: Users },
+      { label: 'Appointments', href: 'appointments', icon: CalendarDays },
+    ],
+  },
+  {
+    section: 'Insights',
+    items: [
+      { label: 'Analytics',    href: 'analytics',    icon: BarChart3 },
+      { label: 'Settings',     href: 'settings',     icon: Settings },
+    ],
+  },
 ]
 
 interface SidebarProps {
@@ -99,10 +118,6 @@ export default function Sidebar({ workspaceId }: SidebarProps) {
           })
 
           // Fetch workspaces the user is a member of
-          const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-          const sbKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-          // Use REST to get memberships joined with workspaces
           const { data: memberships } = await supabase
             .from('user_workspace_memberships')
             .select('workspace_id')
@@ -153,23 +168,43 @@ export default function Sidebar({ workspaceId }: SidebarProps) {
         borderRight: '1px solid var(--sidebar-border)',
       }}
     >
+      {/* ── Brand ──────────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2.5 px-4 pt-4 pb-3">
+        <div
+          className="relative flex size-9 shrink-0 items-center justify-center rounded-xl text-white shadow-lg"
+          style={{ backgroundImage: 'var(--brand-gradient)', boxShadow: 'var(--brand-glow)' }}
+        >
+          <MessageSquare className="size-[18px]" strokeWidth={2.4} />
+          <span
+            className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full ring-2"
+            style={{ backgroundColor: 'var(--wa-green)', ['--tw-ring-color' as string]: 'var(--sidebar-bg)' }}
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-extrabold leading-none tracking-tight" style={{ color: 'var(--sidebar-text)' }}>
+            Nexora
+          </p>
+          <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em]" style={{ color: 'var(--sidebar-text-muted)' }}>
+            WhatsApp CRM
+          </p>
+        </div>
+      </div>
+
       {/* ── Workspace Switcher ─────────────────────────────────────────── */}
-      <div
-        ref={wsRef}
-        className="relative"
-        style={{ borderBottom: '1px solid var(--sidebar-border)' }}
-      >
+      <div ref={wsRef} className="relative px-3 pb-3">
         <button
           onClick={() => setWsOpen(!wsOpen)}
-          className="flex w-full items-center gap-2.5 px-3 py-3.5 transition-colors focus:outline-none"
-          style={{ backgroundColor: wsOpen ? 'var(--sidebar-hover)' : 'transparent' }}
-          onMouseEnter={(e) => { if (!wsOpen) e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)' }}
-          onMouseLeave={(e) => { if (!wsOpen) e.currentTarget.style.backgroundColor = 'transparent' }}
+          className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 transition-colors focus:outline-none"
+          style={{
+            backgroundColor: wsOpen ? 'var(--sidebar-active)' : 'var(--sidebar-hover)',
+            border: '1px solid var(--sidebar-border)',
+          }}
+          onMouseEnter={(e) => { if (!wsOpen) e.currentTarget.style.backgroundColor = 'var(--sidebar-active)' }}
+          onMouseLeave={(e) => { if (!wsOpen) e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)' }}
         >
-          {/* Workspace icon */}
           <div
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
-            style={{ backgroundColor: 'var(--wa-green)' }}
+            className="flex size-7 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold text-white"
+            style={{ backgroundImage: 'var(--brand-gradient)' }}
           >
             {getInitials(currentWorkspace?.name ?? 'WS')}
           </div>
@@ -177,7 +212,7 @@ export default function Sidebar({ workspaceId }: SidebarProps) {
             <p className="truncate text-xs font-semibold leading-tight" style={{ color: 'var(--sidebar-text)' }}>
               {currentWorkspace?.name ?? 'Select Workspace'}
             </p>
-            <p className="text-[10px] leading-tight capitalize" style={{ color: 'var(--sidebar-text-muted)' }}>
+            <p className="truncate text-[10px] leading-tight capitalize" style={{ color: 'var(--sidebar-text-muted)' }}>
               {currentWorkspace?.business_type?.replace('_', ' ') ?? 'Agency'}
             </p>
           </div>
@@ -190,14 +225,14 @@ export default function Sidebar({ workspaceId }: SidebarProps) {
         {/* Workspace dropdown panel */}
         {wsOpen && (
           <div
-            className="absolute left-0 right-0 top-full z-50 rounded-b-xl overflow-hidden py-1"
+            className="absolute left-3 right-3 top-full z-50 mt-1 rounded-xl overflow-hidden py-1.5 animate-scale-in"
             style={{
               backgroundColor: 'var(--sidebar-active)',
-              borderTop: '1px solid var(--sidebar-border)',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+              border: '1px solid var(--sidebar-border)',
+              boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
+              transformOrigin: 'top',
             }}
           >
-            {/* Label */}
             <div className="px-3 py-1.5">
               <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--sidebar-text-muted)' }}>
                 Workspaces
@@ -213,14 +248,14 @@ export default function Sidebar({ workspaceId }: SidebarProps) {
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
                 <div
-                  className="flex size-6 shrink-0 items-center justify-center rounded text-[9px] font-bold text-white"
-                  style={{ backgroundColor: ws.id === workspaceId ? 'var(--wa-green)' : 'rgba(255,255,255,0.15)' }}
+                  className="flex size-6 shrink-0 items-center justify-center rounded-md text-[9px] font-bold text-white"
+                  style={ws.id === workspaceId ? { backgroundImage: 'var(--brand-gradient)' } : { backgroundColor: 'rgba(255,255,255,0.12)' }}
                 >
                   {getInitials(ws.name)}
                 </div>
                 <span className="flex-1 truncate text-xs" style={{ color: 'var(--sidebar-text)' }}>{ws.name}</span>
                 {ws.id === workspaceId && (
-                  <Check className="size-3 shrink-0" style={{ color: 'var(--wa-green)' }} />
+                  <Check className="size-3.5 shrink-0" style={{ color: 'var(--brand-light)' }} />
                 )}
               </button>
             ))}
@@ -239,84 +274,119 @@ export default function Sidebar({ workspaceId }: SidebarProps) {
       </div>
 
       {/* ── Navigation ─────────────────────────────────────────────────── */}
-      <nav className="flex-1 overflow-y-auto px-2 py-3">
-        {NAV_ITEMS.map((item) => {
-          const href = `/workspace/${workspaceId}/${item.href}`
-          const isActive = pathname === href || pathname.startsWith(href + '/')
-          const Icon = item.icon
-
-          return (
-            <Link
-              key={item.href}
-              href={href}
-              className="group flex items-center gap-2.5 rounded-lg px-2.5 h-9 text-sm font-medium transition-all mb-0.5"
-              style={{
-                backgroundColor: isActive ? 'var(--sidebar-active)' : 'transparent',
-                color: isActive ? 'var(--sidebar-text)' : 'var(--sidebar-text-muted)',
-                borderLeft: isActive ? '3px solid var(--wa-green)' : '3px solid transparent',
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'
-                  e.currentTarget.style.color = 'var(--sidebar-text)'
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                  e.currentTarget.style.color = 'var(--sidebar-text-muted)'
-                }
-              }}
+      <nav className="flex-1 overflow-y-auto px-3 pb-2 scrollbar-hide">
+        {NAV_SECTIONS.map((group) => (
+          <div key={group.section} className="mb-3">
+            <p
+              className="px-2.5 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
+              style={{ color: 'var(--sidebar-text-muted)' }}
             >
-              <Icon className="size-4 shrink-0" />
-              <span className="flex-1 truncate">{item.label}</span>
-            </Link>
-          )
-        })}
-      </nav>
+              {group.section}
+            </p>
+            {group.items.map((item) => {
+              const href = `/workspace/${workspaceId}/${item.href}`
+              const isActive = pathname === href || pathname.startsWith(href + '/')
+              const Icon = item.icon
 
-      {/* ── Theme Toggle ────────────────────────────────────────────────── */}
-      <div className="px-3 py-2" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
-        <ThemeToggle variant="pill" className="w-full" />
-      </div>
+              return (
+                <Link
+                  key={item.href}
+                  href={href}
+                  className="group relative flex items-center gap-3 rounded-lg px-2.5 h-9 text-[13px] font-medium transition-all mb-0.5"
+                  style={{
+                    backgroundImage: isActive
+                      ? 'linear-gradient(90deg, rgba(249,115,22,0.20), rgba(249,115,22,0.05))'
+                      : 'none',
+                    color: isActive ? 'var(--sidebar-text)' : 'var(--sidebar-text-muted)',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'
+                      e.currentTarget.style.color = 'var(--sidebar-text)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = 'transparent'
+                      e.currentTarget.style.color = 'var(--sidebar-text-muted)'
+                    }
+                  }}
+                >
+                  {isActive && (
+                    <span
+                      className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full"
+                      style={{ backgroundImage: 'var(--brand-gradient)' }}
+                    />
+                  )}
+                  <Icon
+                    className="size-[18px] shrink-0 transition-colors"
+                    style={{ color: isActive ? 'var(--brand-light)' : 'inherit' }}
+                    strokeWidth={isActive ? 2.4 : 2}
+                  />
+                  <span className="flex-1 truncate">{item.label}</span>
+                </Link>
+              )
+            })}
+          </div>
+        ))}
+      </nav>
 
       {/* ── AI Status ───────────────────────────────────────────────────── */}
       {currentWorkspace && (
         <div className="px-3 pb-2">
           <div
-            className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs"
+            className="flex items-center gap-2.5 rounded-xl px-3 py-2.5"
             style={{
-              backgroundColor: currentWorkspace.ai_enabled ? 'rgba(0,168,132,0.12)' : 'rgba(255,255,255,0.05)',
-              color: currentWorkspace.ai_enabled ? 'var(--wa-green)' : 'var(--sidebar-text-muted)',
+              backgroundColor: currentWorkspace.ai_enabled ? 'rgba(18,161,80,0.12)' : 'var(--sidebar-hover)',
+              border: `1px solid ${currentWorkspace.ai_enabled ? 'rgba(18,161,80,0.25)' : 'var(--sidebar-border)'}`,
             }}
           >
-            <span
-              className="size-1.5 rounded-full"
-              style={{ backgroundColor: currentWorkspace.ai_enabled ? 'var(--wa-green)' : 'var(--sidebar-text-muted)' }}
-            />
-            <span className="font-medium">AI {currentWorkspace.ai_enabled ? 'Active' : 'Disabled'}</span>
+            <span className="relative flex size-2.5 shrink-0">
+              {currentWorkspace.ai_enabled && (
+                <span
+                  className="absolute inline-flex size-full animate-ping rounded-full opacity-60"
+                  style={{ backgroundColor: 'var(--wa-green)' }}
+                />
+              )}
+              <span
+                className="relative inline-flex size-2.5 rounded-full"
+                style={{ backgroundColor: currentWorkspace.ai_enabled ? 'var(--wa-green)' : 'var(--sidebar-text-muted)' }}
+              />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold leading-tight" style={{ color: currentWorkspace.ai_enabled ? '#4ade80' : 'var(--sidebar-text-muted)' }}>
+                AI Agent {currentWorkspace.ai_enabled ? 'Active' : 'Disabled'}
+              </p>
+              <p className="text-[10px] leading-tight" style={{ color: 'var(--sidebar-text-muted)' }}>
+                {currentWorkspace.ai_enabled ? 'Auto-replying to chats' : 'Manual mode'}
+              </p>
+            </div>
           </div>
         </div>
       )}
 
+      {/* ── Theme Toggle ────────────────────────────────────────────────── */}
+      <div className="px-3 pb-2">
+        <ThemeToggle variant="pill" className="w-full" />
+      </div>
+
       {/* ── User Profile ─────────────────────────────────────────────────── */}
       <div
         ref={userRef}
-        className="relative p-2"
+        className="relative p-3"
         style={{ borderTop: '1px solid var(--sidebar-border)' }}
       >
-        {/* User menu panel — renders ABOVE the trigger, inside sidebar */}
         {userOpen && (
           <div
-            className="absolute bottom-full left-2 right-2 mb-1 rounded-xl overflow-hidden py-1"
+            className="absolute bottom-full left-3 right-3 mb-1.5 rounded-xl overflow-hidden py-1.5 animate-scale-in"
             style={{
               backgroundColor: 'var(--sidebar-active)',
               border: '1px solid var(--sidebar-border)',
-              boxShadow: '0 -8px 24px rgba(0,0,0,0.4)',
+              boxShadow: '0 -12px 32px rgba(0,0,0,0.5)',
+              transformOrigin: 'bottom',
               zIndex: 50,
             }}
           >
-            {/* Header */}
             <div className="px-3 py-2" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
               <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--sidebar-text-muted)' }}>
                 Account
@@ -342,8 +412,8 @@ export default function Sidebar({ workspaceId }: SidebarProps) {
             <button
               onClick={handleSignOut}
               className="flex w-full items-center gap-2.5 px-3 py-2 text-xs transition-colors"
-              style={{ color: '#ef4444' }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.1)')}
+              style={{ color: '#f87171' }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.12)')}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               <LogOut className="size-3.5" />
@@ -352,21 +422,20 @@ export default function Sidebar({ workspaceId }: SidebarProps) {
           </div>
         )}
 
-        {/* Trigger button */}
         <button
           onClick={() => setUserOpen(!userOpen)}
-          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 transition-colors focus:outline-none"
+          className="flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 transition-colors focus:outline-none"
           onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)')}
           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
         >
           <div
-            className="flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
-            style={{ backgroundColor: 'var(--wa-green)' }}
+            className="flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
+            style={{ backgroundImage: 'var(--brand-gradient)' }}
           >
             {getInitials(displayName)}
           </div>
           <div className="min-w-0 flex-1 text-left">
-            <p className="truncate text-xs font-medium" style={{ color: 'var(--sidebar-text)' }}>
+            <p className="truncate text-xs font-semibold" style={{ color: 'var(--sidebar-text)' }}>
               {displayName}
             </p>
             <p className="truncate text-[10px]" style={{ color: 'var(--sidebar-text-muted)' }}>
@@ -374,8 +443,8 @@ export default function Sidebar({ workspaceId }: SidebarProps) {
             </p>
           </div>
           {userOpen
-            ? <ChevronUp className="size-3" style={{ color: 'var(--sidebar-text-muted)' }} />
-            : <ChevronDown className="size-3" style={{ color: 'var(--sidebar-text-muted)' }} />
+            ? <ChevronUp className="size-3.5" style={{ color: 'var(--sidebar-text-muted)' }} />
+            : <ChevronDown className="size-3.5" style={{ color: 'var(--sidebar-text-muted)' }} />
           }
         </button>
       </div>

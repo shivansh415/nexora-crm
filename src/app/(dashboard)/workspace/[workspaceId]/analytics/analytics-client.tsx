@@ -93,14 +93,21 @@ export default function AnalyticsClient({ data }: AnalyticsClientProps) {
   // Empty state
   if (data.length === 0) {
     return (
-      <div className="p-6 max-w-7xl">
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-zinc-900">Analytics</h1>
-          <p className="text-xs text-zinc-500 mt-0.5">Performance overview</p>
+      <div className="mx-auto max-w-7xl p-5 sm:p-6 lg:p-8">
+        <div className="mb-6 flex items-center gap-3">
+          <span className="flex size-11 items-center justify-center rounded-2xl text-white shadow-md" style={{ backgroundImage: 'var(--brand-gradient)' }}>
+            <BarChart3 className="size-5" />
+          </span>
+          <div>
+            <h1 className="text-xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">Analytics</h1>
+            <p className="text-xs text-zinc-500 mt-0.5">Performance overview</p>
+          </div>
         </div>
-        <div className="rounded-lg border border-dashed border-zinc-200 py-20 text-center">
-          <BarChart3 className="size-12 text-zinc-200 mx-auto mb-3" />
-          <p className="text-sm font-medium text-zinc-500">No analytics data yet</p>
+        <div className="rounded-2xl border border-dashed border-zinc-200 py-20 text-center dark:border-zinc-800">
+          <div className="mx-auto mb-3 flex size-16 items-center justify-center rounded-2xl bg-orange-50 dark:bg-orange-500/10">
+            <BarChart3 className="size-8 text-orange-400" />
+          </div>
+          <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">No analytics data yet</p>
           <p className="text-xs text-zinc-400 mt-1">Analytics will populate as messages flow through the system</p>
         </div>
       </div>
@@ -108,25 +115,31 @@ export default function AnalyticsClient({ data }: AnalyticsClientProps) {
   }
 
   return (
-    <div className="p-6 max-w-7xl">
+    <div className="mx-auto max-w-7xl p-5 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-zinc-900">Analytics</h1>
-          <p className="text-xs text-zinc-500 mt-0.5">Performance overview</p>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 animate-fade-up">
+        <div className="flex items-center gap-3">
+          <span className="flex size-11 items-center justify-center rounded-2xl text-white shadow-md" style={{ backgroundImage: 'var(--brand-gradient)' }}>
+            <BarChart3 className="size-5" />
+          </span>
+          <div>
+            <h1 className="text-xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">Analytics</h1>
+            <p className="text-xs text-zinc-500 mt-0.5">Performance overview</p>
+          </div>
         </div>
         <ExportCsvButton rows={chartData} filename={`analytics-${range.toLowerCase().replace(/\s+/g, '-')}`} label="Export" />
       </div>
 
       {/* Range Selector */}
-      <div className="mb-6 flex gap-1">
+      <div className="mb-6 flex flex-wrap gap-1.5">
         {RANGES.map((r) => (
           <button
             key={r}
             onClick={() => setRange(r)}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-              range === r ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
+              range === r ? 'text-white shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
             }`}
+            style={range === r ? { backgroundImage: 'var(--brand-gradient)' } : undefined}
           >
             {r}
           </button>
@@ -134,16 +147,16 @@ export default function AnalyticsClient({ data }: AnalyticsClientProps) {
       </div>
 
       {/* Stat Cards */}
-      <div className="mb-8 grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="mb-8 grid grid-cols-2 gap-4 stagger xl:grid-cols-4">
         {[
-          { label: 'Total Messages', value: totals.messages, color: 'text-zinc-900' },
-          { label: 'New Leads', value: totals.leads, color: 'text-amber-600' },
-          { label: 'Appointments Booked', value: totals.appointments, color: 'text-blue-600' },
-          { label: 'AI Response Rate', value: `${aiRate}%`, color: 'text-green-600' },
+          { label: 'Total Messages', value: totals.messages, color: 'text-orange-600 dark:text-orange-400' },
+          { label: 'New Leads', value: totals.leads, color: 'text-amber-600 dark:text-amber-400' },
+          { label: 'Appointments Booked', value: totals.appointments, color: 'text-blue-600 dark:text-blue-400' },
+          { label: 'AI Response Rate', value: `${aiRate}%`, color: 'text-emerald-600 dark:text-emerald-400' },
         ].map((stat) => (
-          <div key={stat.label} className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
-            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">{stat.label}</p>
-            <p className={`mt-2 text-3xl font-bold ${stat.color}`}>{stat.value}</p>
+          <div key={stat.label} className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{stat.label}</p>
+            <p className={`mt-2 text-[32px] font-extrabold leading-none tabular-nums ${stat.color}`}>{stat.value}</p>
           </div>
         ))}
       </div>
@@ -151,8 +164,8 @@ export default function AnalyticsClient({ data }: AnalyticsClientProps) {
       {/* Charts Grid */}
       <div className="grid gap-6 xl:grid-cols-2">
         {/* Messages Over Time */}
-        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
-          <h3 className="mb-4 text-sm font-semibold text-zinc-900">Messages Over Time</h3>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <h3 className="mb-4 text-sm font-bold text-zinc-900 dark:text-zinc-100">Messages Over Time</h3>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
@@ -160,15 +173,15 @@ export default function AnalyticsClient({ data }: AnalyticsClientProps) {
               <YAxis tick={{ fontSize: 11, fill: chartColors.axis }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={{ fontSize: 12, border: `1px solid ${chartColors.tooltip.border}`, borderRadius: '6px', background: chartColors.tooltip.background }} />
               <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-              <Line type="monotone" dataKey="inbound" name="Inbound" stroke="#18181B" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="outbound" name="Outbound" stroke="#16A34A" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="inbound" name="Inbound" stroke="#78716c" strokeWidth={2.5} dot={false} />
+              <Line type="monotone" dataKey="outbound" name="Outbound" stroke="#f97316" strokeWidth={2.5} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         {/* AI vs Human Pie */}
-        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
-          <h3 className="mb-4 text-sm font-semibold text-zinc-900">AI vs Human Messages</h3>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <h3 className="mb-4 text-sm font-bold text-zinc-900 dark:text-zinc-100">AI vs Human Messages</h3>
           <div className="flex items-center gap-8">
             <ResponsiveContainer width={160} height={160}>
               <PieChart>
@@ -194,8 +207,8 @@ export default function AnalyticsClient({ data }: AnalyticsClientProps) {
         </div>
 
         {/* New Leads vs Appointments */}
-        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 xl:col-span-2">
-          <h3 className="mb-4 text-sm font-semibold text-zinc-900">Leads &amp; Appointments</h3>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 xl:col-span-2">
+          <h3 className="mb-4 text-sm font-bold text-zinc-900 dark:text-zinc-100">Leads &amp; Appointments</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
@@ -203,8 +216,8 @@ export default function AnalyticsClient({ data }: AnalyticsClientProps) {
               <YAxis tick={{ fontSize: 11, fill: chartColors.axis }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={{ fontSize: 12, border: `1px solid ${chartColors.tooltip.border}`, borderRadius: '6px', background: chartColors.tooltip.background }} />
               <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="leads" name="New Leads" fill="#D97706" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="appointments" name="Appointments" fill="#2563EB" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="leads" name="New Leads" fill="#f97316" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="appointments" name="Appointments" fill="#2563EB" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

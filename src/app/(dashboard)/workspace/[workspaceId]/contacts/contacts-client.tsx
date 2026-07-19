@@ -43,16 +43,19 @@ function getAvatarColor(name: string): string {
 
 function LeadScoreBar({ score }: { score: number }) {
   const isHot = score >= 80, isWarm = score >= 50 && score < 80, isCool = score >= 30 && score < 50
-  const label = isHot ? '🔥 Hot' : isWarm ? '♨️ Warm' : isCool ? '🌡️ Cool' : '❄️ Cold'
-  const cls = isHot ? 'bg-red-100 text-red-700' : isWarm ? 'bg-amber-100 text-amber-700' : isCool ? 'bg-blue-100 text-blue-700' : 'bg-zinc-100 text-zinc-500'
+  const label = isHot ? 'Hot' : isWarm ? 'Warm' : isCool ? 'Cool' : 'Cold'
+  const cls = isHot ? 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400' : isWarm ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400' : isCool ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400' : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
+  const dot = isHot ? 'bg-red-500' : isWarm ? 'bg-amber-400' : isCool ? 'bg-blue-400' : 'bg-zinc-300'
   return (
     <div className="flex items-center gap-2">
-      <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', cls)}>{label}</span>
+      <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold', cls)}>
+        <span className={cn('size-1.5 rounded-full', dot)} />{label}
+      </span>
       <div className="flex items-center gap-1">
-        <div className="h-1.5 w-16 rounded-full bg-zinc-100 overflow-hidden">
-          <div className={cn('h-full rounded-full', isHot ? 'bg-red-500' : isWarm ? 'bg-amber-400' : isCool ? 'bg-blue-400' : 'bg-zinc-300')} style={{ width: `${score}%` }} />
+        <div className="h-1.5 w-16 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+          <div className={cn('h-full rounded-full', dot)} style={{ width: `${score}%` }} />
         </div>
-        <span className="text-[10px] text-zinc-400">{score}</span>
+        <span className="text-[10px] font-semibold tabular-nums text-zinc-400">{score}</span>
       </div>
     </div>
   )
@@ -108,10 +111,17 @@ export default function ContactsClient({ initial, workspaceId }: { initial: Cont
   return (
     <div className="p-6 max-w-7xl">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Contacts</h1>
-          <p className="text-xs text-zinc-500 mt-0.5">{contacts.length} total contacts</p>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 animate-fade-up">
+        <div className="flex items-center gap-3">
+          <span className="flex size-11 items-center justify-center rounded-2xl text-white shadow-md" style={{ backgroundImage: 'var(--brand-gradient)' }}>
+            <Users className="size-5" />
+          </span>
+          <div>
+            <h1 className="text-xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">Contacts</h1>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              <span className="font-semibold text-orange-600 dark:text-orange-400">{contacts.length}</span> total contacts
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Link href={`/workspace/${workspaceId}/broadcast`}>
@@ -137,11 +147,13 @@ export default function ContactsClient({ initial, workspaceId }: { initial: Cont
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         {filtered.length === 0 ? (
           <div className="py-16 text-center">
-            <Users className="size-10 text-zinc-200 mx-auto mb-3" />
-            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+            <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-2xl bg-orange-50 dark:bg-orange-500/10">
+              <Users className="size-7 text-orange-400" />
+            </div>
+            <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">
               {contacts.length === 0 ? 'No contacts yet' : 'No contacts match your search'}
             </p>
             <p className="text-xs text-zinc-400 mt-1">Contacts are created when customers message you on WhatsApp</p>
@@ -157,7 +169,7 @@ export default function ContactsClient({ initial, workspaceId }: { initial: Cont
             </thead>
             <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
               {filtered.map((contact) => (
-                <tr key={contact.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors group">
+                <tr key={contact.id} className="group transition-colors hover:bg-orange-50/40 dark:hover:bg-zinc-800/60">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <Avatar className="size-8">
@@ -188,9 +200,9 @@ export default function ContactsClient({ initial, workspaceId }: { initial: Cont
                     {contact.last_seen_at ? formatDistanceToNow(new Date(contact.last_seen_at), { addSuffix: true }) : '—'}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => setViewing(contact)} className="rounded px-2 py-1 text-[10px] bg-zinc-100 hover:bg-zinc-200 text-zinc-600">View</button>
-                      <button onClick={() => openChat(contact)} className="rounded px-2 py-1 text-[10px] bg-zinc-100 hover:bg-zinc-200 text-zinc-600">Chat</button>
+                    <div className="flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                      <button onClick={() => setViewing(contact)} className="rounded-lg bg-zinc-100 px-2.5 py-1 text-[10px] font-semibold text-zinc-600 transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300">View</button>
+                      <button onClick={() => openChat(contact)} className="rounded-lg bg-orange-100 px-2.5 py-1 text-[10px] font-semibold text-orange-700 transition-colors hover:bg-orange-200 dark:bg-orange-500/15 dark:text-orange-400">Chat</button>
                     </div>
                   </td>
                 </tr>

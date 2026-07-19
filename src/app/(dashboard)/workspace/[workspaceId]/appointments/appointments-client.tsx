@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CalendarDays, MapPin, User, X, RefreshCw } from 'lucide-react'
+import { CalendarDays, MapPin, User, X, RefreshCw, Bot } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -31,12 +31,12 @@ function formatTimeIST(iso: string): string {
 }
 
 const STATUS_STYLES: Record<AppointmentStatus, string> = {
-  scheduled: 'bg-blue-100 text-blue-700',
-  confirmed: 'bg-green-100 text-green-700',
-  rescheduled: 'bg-amber-100 text-amber-700',
-  cancelled: 'bg-red-100 text-red-600',
-  completed: 'bg-zinc-100 text-zinc-500',
-  no_show: 'bg-red-50 text-red-400',
+  scheduled: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400',
+  confirmed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400',
+  rescheduled: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400',
+  cancelled: 'bg-red-100 text-red-600 dark:bg-red-500/15 dark:text-red-400',
+  completed: 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400',
+  no_show: 'bg-red-50 text-red-400 dark:bg-red-500/10 dark:text-red-400',
 }
 
 export interface AppointmentRow {
@@ -88,7 +88,7 @@ export default function AppointmentsClient({ initial }: { initial: AppointmentRo
   function AppCard({ apt }: { apt: AppointmentRow }) {
     const active = ['scheduled', 'confirmed', 'rescheduled'].includes(apt.status)
     return (
-      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 hover:shadow-sm transition-shadow">
+      <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex items-start justify-between mb-3">
           <div>
             <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{apt.title}</p>
@@ -113,20 +113,27 @@ export default function AppointmentsClient({ initial }: { initial: AppointmentRo
           )}
           <div className="flex items-center gap-2">
             <CalendarDays className="size-3 text-zinc-400 dark:text-zinc-500" />
-            <span>Booked by {apt.booked_by === 'ai' ? '🤖 AI' : apt.booked_by === 'agent' ? '👤 Agent' : '👤 Customer'}</span>
+            <span className="inline-flex items-center gap-1">
+              Booked by
+              {apt.booked_by === 'ai' ? (
+                <span className="inline-flex items-center gap-0.5 font-semibold text-emerald-600 dark:text-emerald-400"><Bot className="size-3" /> AI</span>
+              ) : (
+                <span className="inline-flex items-center gap-0.5 font-semibold text-zinc-600 dark:text-zinc-300"><User className="size-3" /> {apt.booked_by === 'agent' ? 'Agent' : 'Customer'}</span>
+              )}
+            </span>
           </div>
         </div>
         <div className="mt-3 flex gap-2">
           <button
             onClick={() => setViewing(apt)}
-            className="rounded px-2.5 py-1 text-[11px] font-medium bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors"
+            className="rounded-lg bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold text-zinc-700 transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300"
           >
             View Details
           </button>
           {active && (
             <button
               onClick={() => setCancelling(apt)}
-              className="rounded px-2.5 py-1 text-[11px] font-medium bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
+              className="rounded-lg bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400"
             >
               Cancel
             </button>
@@ -138,9 +145,16 @@ export default function AppointmentsClient({ initial }: { initial: AppointmentRo
 
   return (
     <div className="p-6 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Appointments</h1>
-        <p className="text-xs text-zinc-500 mt-0.5">{upcoming.length} upcoming · booked automatically by the AI</p>
+      <div className="mb-6 flex items-center gap-3 animate-fade-up">
+        <span className="flex size-11 items-center justify-center rounded-2xl text-white shadow-md" style={{ backgroundImage: 'var(--brand-gradient)' }}>
+          <CalendarDays className="size-5" />
+        </span>
+        <div>
+          <h1 className="text-xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">Appointments</h1>
+          <p className="text-xs text-zinc-500 mt-0.5">
+            <span className="font-semibold text-orange-600 dark:text-orange-400">{upcoming.length}</span> upcoming · booked automatically by the AI
+          </p>
+        </div>
       </div>
 
       <Tabs defaultValue="upcoming">
@@ -151,9 +165,11 @@ export default function AppointmentsClient({ initial }: { initial: AppointmentRo
         <TabsContent value="upcoming">
           <div className="grid gap-3 sm:grid-cols-2">
             {upcoming.length === 0 ? (
-              <div className="col-span-2 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800 py-16 text-center">
-                <CalendarDays className="size-10 text-zinc-200 mx-auto mb-3" />
-                <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">No upcoming appointments</p>
+              <div className="col-span-2 rounded-2xl border border-dashed border-zinc-200 py-16 text-center dark:border-zinc-800">
+                <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-2xl bg-orange-50 dark:bg-orange-500/10">
+                  <CalendarDays className="size-7 text-orange-400" />
+                </div>
+                <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">No upcoming appointments</p>
                 <p className="text-xs text-zinc-400 mt-1">The AI books site visits into your calendar automatically</p>
               </div>
             ) : (

@@ -7,6 +7,7 @@ import {
   Filter,
   Pin,
   Plus,
+  MessageSquare,
   Bot,
   UserRound,
   CheckCheck,
@@ -831,23 +832,22 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
       'w-full md:w-[320px] md:min-w-[320px]'
     )}>
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
-        <h1 className="text-base font-bold text-zinc-900">Chats</h1>
+      <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3.5">
+        <h1 className="text-[17px] font-extrabold tracking-tight text-zinc-900">Chats</h1>
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="size-8" onClick={fetchConversations} title="Refresh">
+            <RefreshCw className="size-4 text-zinc-500" />
+          </Button>
+          <Button variant="ghost" size="icon" className="size-8" title="Filter">
+            <Filter className="size-4 text-zinc-500" />
+          </Button>
           <Button
-            variant="ghost"
             size="icon"
-            className="size-7"
+            className="size-8 shadow-sm"
             onClick={() => setNewChatOpen(true)}
             title="New chat"
           >
-            <Plus className="size-4 text-zinc-500" />
-          </Button>
-          <Button variant="ghost" size="icon" className="size-7" onClick={fetchConversations} title="Refresh">
-            <RefreshCw className="size-4 text-zinc-500" />
-          </Button>
-          <Button variant="ghost" size="icon" className="size-7">
-            <Filter className="size-4 text-zinc-500" />
+            <Plus className="size-4" />
           </Button>
         </div>
       </div>
@@ -855,12 +855,12 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
       {/* Search */}
       <div className="px-3 py-2 border-b border-zinc-100">
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-zinc-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-400" />
           <Input
             placeholder="Search conversations..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 h-8 text-sm" style={{ backgroundColor: "var(--wa-bg)", borderColor: "var(--wa-border)" }}
+            className="pl-9 h-9 rounded-xl text-sm"
           />
         </div>
       </div>
@@ -872,11 +872,12 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
             key={f.id}
             onClick={() => setFilter(f.id)}
             className={cn(
-              'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+              'shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-all',
               filter === f.id
-                ? 'bg-zinc-900 text-white'
+                ? 'text-white shadow-sm'
                 : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
             )}
+            style={filter === f.id ? { backgroundImage: 'var(--brand-gradient)' } : undefined}
           >
             {f.label}
           </button>
@@ -887,14 +888,16 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
       <div className="flex-1 min-h-0 overflow-y-auto">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-            <RefreshCw className="size-6 text-zinc-300 animate-spin mb-3" />
+            <RefreshCw className="size-6 text-orange-400 animate-spin mb-3" />
             <p className="text-sm text-zinc-400">Loading chats...</p>
           </div>
         ) : sortedConversations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-            <MessageSquareIcon className="size-10 text-zinc-200 mb-3" />
-            <p className="text-sm font-medium text-zinc-500">No conversations yet</p>
-            <p className="text-xs text-zinc-400 mt-1">Messages from WhatsApp will appear here in real-time</p>
+          <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+            <div className="mb-3 flex size-14 items-center justify-center rounded-2xl bg-orange-50 dark:bg-orange-500/10">
+              <MessageSquareIcon className="size-7 text-orange-400" />
+            </div>
+            <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">No conversations yet</p>
+            <p className="text-xs text-zinc-400 mt-1 max-w-[200px]">Messages from WhatsApp appear here in real-time</p>
           </div>
         ) : (
           sortedConversations.map((conv) => (
@@ -902,11 +905,14 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
               key={conv.id}
               onClick={() => selectConversation(conv)}
               className={cn(
-                'w-full flex items-center gap-3 px-4 py-3 text-left border-b border-zinc-50 transition-colors',
-                selectedConvId === conv.id ? '!bg-[var(--wa-surface-2)]' : '',
+                'group/row relative w-full flex items-center gap-3 px-4 py-3 text-left border-b border-zinc-50 transition-colors',
+                selectedConvId === conv.id ? 'bg-orange-50 dark:bg-orange-500/10' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/40',
                 conv.status === 'human_takeover' && 'border-l-2 border-l-blue-500'
               )}
             >
+              {selectedConvId === conv.id && (
+                <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full" style={{ backgroundImage: 'var(--brand-gradient)' }} />
+              )}
               <div className="relative shrink-0">
                 <Avatar className="size-10">
                   <AvatarFallback className={cn('text-xs font-semibold text-white', getAvatarColor(conv.contact?.name ?? 'U'))}>
@@ -938,7 +944,7 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
                       <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-semibold text-blue-700">Agent</span>
                     )}
                     {conv.unread_count > 0 && (
-                      <span className="flex size-4 items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ backgroundColor: "var(--wa-green)" }}>
+                      <span className="flex min-w-4 h-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white shadow-sm" style={{ backgroundImage: "var(--brand-gradient)" }}>
                         {conv.unread_count}
                       </span>
                     )}
@@ -962,10 +968,15 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
     style={{ backgroundColor: selectedConvId ? 'var(--wa-surface)' : 'var(--wa-bg)' }}
     >
       {!selectedConvId ? (
-        <div className="text-center">
-          <div className="text-5xl mb-4">💬</div>
-          <p className="text-sm font-medium text-zinc-600">Select a conversation</p>
-          <p className="text-xs text-zinc-400 mt-1">Choose from the list to start chatting</p>
+        <div className="text-center animate-fade-up px-6">
+          <div
+            className="mx-auto mb-4 flex size-20 items-center justify-center rounded-3xl text-white shadow-lg"
+            style={{ backgroundImage: 'var(--brand-gradient)', boxShadow: 'var(--brand-glow)' }}
+          >
+            <MessageSquare className="size-9" strokeWidth={1.8} />
+          </div>
+          <p className="text-base font-bold text-zinc-800 dark:text-zinc-100">Select a conversation</p>
+          <p className="text-sm text-zinc-400 mt-1">Choose a chat from the list to start messaging</p>
         </div>
       ) : (
         <>
@@ -1304,7 +1315,7 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
                   placeholder={pendingKind === 'image' ? 'Add a caption…' : 'Type a message...'}
                   rows={1}
                   disabled={sending}
-                  className="flex-1 resize-none rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-all disabled:opacity-50"
+                  className="flex-1 resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 transition-all focus:border-orange-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                   style={{ maxHeight: '120px', overflowY: 'auto' }}
                 />
                 {/* Voice note (when nothing typed and no pending) OR Send */}
@@ -1350,7 +1361,7 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
       <DialogContent className="sm:max-w-md">
         {/* Header */}
         <DialogHeader className="flex-row items-center gap-3 space-y-0">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-wa-green/10 text-wa-green">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full text-white shadow-md" style={{ backgroundImage: 'var(--brand-gradient)' }}>
             <Send className="size-[18px]" />
           </div>
           <div className="min-w-0 space-y-0.5">
@@ -1404,8 +1415,8 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
           </div>
 
           {/* Info callout */}
-          <div className="flex gap-2.5 rounded-lg border border-wa-green/15 bg-wa-green/5 p-3">
-            <Sparkles className="mt-0.5 size-4 shrink-0 text-wa-green" />
+          <div className="flex gap-2.5 rounded-xl border border-orange-200 bg-orange-50 p-3 dark:border-orange-500/25 dark:bg-orange-500/10">
+            <Sparkles className="mt-0.5 size-4 shrink-0 text-orange-500" />
             <p className="text-[12px] leading-relaxed text-zinc-600">
               WhatsApp requires an approved template for the first message, so we send{' '}
               <span className="font-medium text-zinc-800">ad_lead_message</span> automatically. The moment they reply, the AI takes over the conversation.

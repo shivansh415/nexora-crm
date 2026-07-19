@@ -66,7 +66,8 @@ export function ThemeToggle({ variant = 'pill', className }: ThemeToggleProps) {
             onClick={() => setTheme(value)}
             className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-150"
             style={{
-              backgroundColor: isActive ? 'var(--wa-green)' : 'transparent',
+              backgroundImage: isActive ? 'var(--brand-gradient)' : 'none',
+              backgroundColor: isActive ? 'var(--brand)' : 'transparent',
               color: isActive ? '#ffffff' : 'var(--sidebar-text-muted)',
             }}
             onMouseEnter={(e) => {

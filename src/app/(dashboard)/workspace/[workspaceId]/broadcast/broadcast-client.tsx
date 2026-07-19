@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Upload, FileSpreadsheet, Send, CheckCircle2, XCircle, AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react'
+import { Upload, FileSpreadsheet, Send, CheckCircle2, XCircle, AlertTriangle, RefreshCw, ArrowLeft, Megaphone } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -40,10 +40,10 @@ interface SendResponse {
 type Stage = 'upload' | 'preview' | 'sending' | 'done'
 
 const STATUS_STYLES: Record<PreviewStatus, string> = {
-  new: 'bg-green-100 text-green-700',
-  duplicate: 'bg-amber-100 text-amber-700',
-  invalid: 'bg-red-100 text-red-700',
-  unreachable: 'bg-red-100 text-red-700',
+  new: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400',
+  duplicate: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400',
+  invalid: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400',
+  unreachable: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400',
 }
 
 export default function BroadcastClient({ workspaceId }: { workspaceId: string }) {
@@ -128,12 +128,17 @@ export default function BroadcastClient({ workspaceId }: { workspaceId: string }
   return (
     <div className="p-6 max-w-5xl">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Broadcast to Ad Leads</h1>
-        <p className="text-xs text-zinc-500 mt-0.5">
-          Upload your Meta ads sheet, review the list, and send the approved first-message template.
-          When a lead replies, the AI takes over automatically.
-        </p>
+      <div className="mb-6 flex items-start gap-3 animate-fade-up">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-md" style={{ backgroundImage: 'var(--brand-gradient)' }}>
+          <Megaphone className="size-5" />
+        </span>
+        <div>
+          <h1 className="text-xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">Broadcast to Ad Leads</h1>
+          <p className="text-xs text-zinc-500 mt-0.5 max-w-xl">
+            Upload your Meta ads sheet, review the list, and send the approved first-message template.
+            When a lead replies, the AI takes over automatically.
+          </p>
+        </div>
       </div>
 
       {/* ── Upload stage ── */}
@@ -147,8 +152,8 @@ export default function BroadcastClient({ workspaceId }: { workspaceId: string }
             if (f) handleFile(f)
           }}
           className={cn(
-            'rounded-xl border-2 border-dashed p-12 text-center transition-colors',
-            dragOver ? 'border-green-500 bg-green-50' : 'border-zinc-300 dark:border-zinc-700'
+            'rounded-2xl border-2 border-dashed p-12 text-center transition-all',
+            dragOver ? 'border-orange-400 bg-orange-50 dark:bg-orange-500/5' : 'border-zinc-300 hover:border-orange-300 dark:border-zinc-700'
           )}
         >
           <input
@@ -165,8 +170,10 @@ export default function BroadcastClient({ workspaceId }: { workspaceId: string }
             </div>
           ) : (
             <div className="flex flex-col items-center">
-              <Upload className="size-8 text-zinc-400 mb-3" />
-              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">Drag & drop your sheet here</p>
+              <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-orange-50 dark:bg-orange-500/10">
+                <Upload className="size-7 text-orange-500" />
+              </div>
+              <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">Drag & drop your sheet here</p>
               <p className="text-xs text-zinc-400 mt-1 mb-4">Supports .csv and .xlsx exported from Meta</p>
               <Button onClick={() => inputRef.current?.click()} className="gap-1.5">
                 <FileSpreadsheet className="size-4" /> Choose file
@@ -199,7 +206,7 @@ export default function BroadcastClient({ workspaceId }: { workspaceId: string }
           </div>
 
           {/* Table */}
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden max-h-[420px] overflow-y-auto">
+          <div className="max-h-[420px] overflow-hidden overflow-y-auto rounded-2xl border border-zinc-200 shadow-sm dark:border-zinc-800">
             <table className="w-full text-sm">
               <thead className="sticky top-0">
                 <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
@@ -210,7 +217,7 @@ export default function BroadcastClient({ workspaceId }: { workspaceId: string }
               </thead>
               <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
                 {preview.rows.map((r) => (
-                  <tr key={r.rowNumber} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                  <tr key={r.rowNumber} className="transition-colors hover:bg-orange-50/40 dark:hover:bg-zinc-800/40">
                     <td className="px-3 py-2 text-[11px] text-zinc-400">{r.rowNumber}</td>
                     <td className="px-3 py-2 text-xs text-zinc-800 dark:text-zinc-200">{r.name || '—'}</td>
                     <td className="px-3 py-2 text-xs text-zinc-600 dark:text-zinc-300 font-mono">{r.phone ?? '—'}</td>
@@ -241,8 +248,8 @@ export default function BroadcastClient({ workspaceId }: { workspaceId: string }
 
       {/* ── Sending stage ── */}
       {stage === 'sending' && (
-        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-12 text-center">
-          <RefreshCw className="size-8 text-green-500 animate-spin mx-auto mb-3" />
+        <div className="rounded-2xl border border-zinc-200 p-12 text-center shadow-sm dark:border-zinc-800">
+          <RefreshCw className="mx-auto mb-3 size-8 animate-spin text-orange-500" />
           <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">Sending messages…</p>
           <p className="text-xs text-zinc-400 mt-1">This can take a moment — messages are throttled to respect WhatsApp limits. Please keep this tab open.</p>
         </div>
@@ -258,7 +265,7 @@ export default function BroadcastClient({ workspaceId }: { workspaceId: string }
             <SummaryCard label="Failed" value={report.summary.failed} accent="red" />
           </div>
 
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden max-h-[420px] overflow-y-auto">
+          <div className="max-h-[420px] overflow-hidden overflow-y-auto rounded-2xl border border-zinc-200 shadow-sm dark:border-zinc-800">
             <table className="w-full text-sm">
               <thead className="sticky top-0">
                 <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
@@ -269,7 +276,7 @@ export default function BroadcastClient({ workspaceId }: { workspaceId: string }
               </thead>
               <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
                 {report.report.map((r, i) => (
-                  <tr key={i} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                  <tr key={i} className="transition-colors hover:bg-orange-50/40 dark:hover:bg-zinc-800/40">
                     <td className="px-3 py-2 text-xs text-zinc-800 dark:text-zinc-200">{r.name || '—'}</td>
                     <td className="px-3 py-2 text-xs text-zinc-600 dark:text-zinc-300 font-mono">{r.phone}</td>
                     <td className="px-3 py-2">
@@ -300,13 +307,13 @@ export default function BroadcastClient({ workspaceId }: { workspaceId: string }
 
 function SummaryCard({ label, value, accent }: { label: string; value: number; accent?: 'green' | 'amber' | 'red' }) {
   const color =
-    accent === 'green' ? 'text-green-600' :
-    accent === 'amber' ? 'text-amber-600' :
-    accent === 'red' ? 'text-red-600' : 'text-zinc-800 dark:text-zinc-100'
+    accent === 'green' ? 'text-emerald-600 dark:text-emerald-400' :
+    accent === 'amber' ? 'text-amber-600 dark:text-amber-400' :
+    accent === 'red' ? 'text-red-600 dark:text-red-400' : 'text-zinc-800 dark:text-zinc-100'
   return (
-    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
       <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">{label}</p>
-      <p className={cn('text-2xl font-bold mt-1', color)}>{value}</p>
+      <p className={cn('mt-1 text-2xl font-extrabold tabular-nums', color)}>{value}</p>
     </div>
   )
 }

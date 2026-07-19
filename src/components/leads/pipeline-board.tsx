@@ -3,20 +3,20 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
 import {
-  Plus,
   LayoutGrid,
   List,
-  Tag,
   Calendar,
-  DollarSign,
-  User,
-  Phone,
   Search,
   GripVertical,
   ExternalLink,
   ChevronRight,
-  Inbox,
   Bot,
+  MessageCircle,
+  FileSpreadsheet,
+  PenLine,
+  Target,
+  Pencil,
+  MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Lead, LeadStatus } from '@/types'
@@ -52,10 +52,10 @@ function formatCurrency(value: number) {
   return `₹${value.toLocaleString()}`
 }
 
-function getSourceIcon(source: string) {
-  if (source === 'whatsapp') return '📱'
-  if (source === 'google_sheets') return '📊'
-  return '✏️'
+function SourceIcon({ source, className }: { source: string; className?: string }) {
+  if (source === 'whatsapp') return <MessageCircle className={cn('text-emerald-500', className)} />
+  if (source === 'google_sheets') return <FileSpreadsheet className={cn('text-blue-500', className)} />
+  return <PenLine className={cn('text-zinc-400', className)} />
 }
 
 interface PipelineBoardProps {
@@ -136,31 +136,40 @@ export default function PipelineBoard({ workspaceId, leads: initialLeads }: Pipe
   return (
     <div className="flex flex-col h-full">
       {/* Page Header */}
-      <div className="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-4">
-        <div>
-          <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Lead Pipeline</h1>
-          <p className="text-xs text-zinc-500 mt-0.5">{leads.filter((l) => !['won', 'lost'].includes(l.status)).length} active leads</p>
+      <div className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-white px-5 py-4 sm:px-6 dark:bg-transparent">
+        <div className="flex items-center gap-3">
+          <span className="flex size-10 items-center justify-center rounded-xl text-white shadow-md" style={{ backgroundImage: 'var(--brand-gradient)' }}>
+            <Target className="size-5" />
+          </span>
+          <div>
+            <h1 className="text-lg font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100">Lead Pipeline</h1>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              <span className="font-semibold text-orange-600 dark:text-orange-400">{leads.filter((l) => !['won', 'lost'].includes(l.status)).length}</span> active leads
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative hidden sm:block">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-zinc-400 dark:text-zinc-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-400 dark:text-zinc-500" />
             <Input
               placeholder="Search leads..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 h-8 w-48 text-sm"
+              className="pl-9 h-9 w-52 rounded-xl text-sm"
             />
           </div>
-          <div className="flex rounded-md border border-zinc-200 overflow-hidden">
+          <div className="flex rounded-xl border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-800/50">
             <button
               onClick={() => setView('board')}
-              className={cn('px-2.5 py-1.5 transition-colors', view === 'board' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:bg-zinc-50')}
+              className={cn('flex items-center justify-center rounded-lg px-2.5 py-1.5 transition-all', view === 'board' ? 'bg-white text-orange-600 shadow-sm dark:bg-zinc-900 dark:text-orange-400' : 'text-zinc-500 hover:text-zinc-700')}
+              title="Board view"
             >
               <LayoutGrid className="size-4" />
             </button>
             <button
               onClick={() => setView('table')}
-              className={cn('px-2.5 py-1.5 transition-colors', view === 'table' ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:bg-zinc-50')}
+              className={cn('flex items-center justify-center rounded-lg px-2.5 py-1.5 transition-all', view === 'table' ? 'bg-white text-orange-600 shadow-sm dark:bg-zinc-900 dark:text-orange-400' : 'text-zinc-500 hover:text-zinc-700')}
+              title="Table view"
             >
               <List className="size-4" />
             </button>
@@ -179,24 +188,26 @@ export default function PipelineBoard({ workspaceId, leads: initialLeads }: Pipe
                 <div
                   key={stage.id}
                   className={cn(
-                    'flex w-72 flex-col rounded-lg border transition-colors',
-                    dragOver === stage.id ? 'border-zinc-400 bg-zinc-100' : 'border-zinc-200 bg-zinc-50/50'
+                    'flex w-[300px] shrink-0 flex-col rounded-2xl border transition-all',
+                    dragOver === stage.id
+                      ? 'border-orange-300 bg-orange-50/60 ring-2 ring-orange-200 dark:border-orange-500/40 dark:bg-orange-500/5 dark:ring-orange-500/20'
+                      : 'border-zinc-200 bg-zinc-50/60 dark:border-zinc-800 dark:bg-zinc-900/40'
                   )}
                   onDragOver={(e) => handleDragOver(e, stage.id)}
                   onDrop={() => handleDrop(stage.id)}
                   onDragLeave={() => setDragOver(null)}
                 >
                   {/* Column Header */}
-                  <div className="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-200 dark:border-zinc-800">
-                    <span className={cn('size-2 rounded-full', stage.color)} />
-                    <span className="text-xs font-semibold text-zinc-700">{stage.label}</span>
-                    <span className="ml-auto flex size-5 items-center justify-center rounded-full bg-zinc-200 text-[10px] font-bold text-zinc-600">
+                  <div className="flex items-center gap-2 px-3.5 py-3">
+                    <span className={cn('size-2.5 rounded-full', stage.color)} />
+                    <span className="text-[13px] font-bold text-zinc-700 dark:text-zinc-200">{stage.label}</span>
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-[10px] font-bold text-zinc-500 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:ring-zinc-700">
                       {stageLeads.length}
                     </span>
                   </div>
                   {totalValue > 0 && (
-                    <div className="px-3 py-1 text-[10px] text-zinc-400 border-b border-zinc-100 dark:border-zinc-800/60">
-                      {formatCurrency(totalValue)} total pipeline
+                    <div className="px-3.5 pb-2 text-[11px] font-semibold text-zinc-400 tabular-nums">
+                      {formatCurrency(totalValue)} in pipeline
                     </div>
                   )}
 
@@ -210,48 +221,52 @@ export default function PipelineBoard({ workspaceId, leads: initialLeads }: Pipe
                           onDragStart={() => handleDragStart(lead.id)}
                           onClick={() => setSelectedLead(lead)}
                           className={cn(
-                            'group cursor-pointer rounded-lg border border-zinc-200 bg-white p-3 shadow-sm transition-all hover:shadow-md hover:border-zinc-300',
-                            dragging === lead.id && 'opacity-50'
+                            'group cursor-pointer rounded-xl border border-zinc-200 bg-white p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900',
+                            dragging === lead.id && 'rotate-1 opacity-40'
                           )}
                         >
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs">{getSourceIcon(lead.source)}</span>
-                              <p className="text-xs font-semibold text-zinc-900 line-clamp-1">
+                          <div className="mb-2 flex items-start justify-between gap-2">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <Avatar className="size-7 shrink-0">
+                                <AvatarFallback className="text-[10px] font-bold text-white" style={{ backgroundImage: 'var(--brand-gradient)' }}>
+                                  {getInitials(lead.contact?.name ?? 'U')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <p className="truncate text-[13px] font-bold text-zinc-900 dark:text-zinc-100">
                                 {lead.contact?.name ?? 'Unknown'}
                               </p>
                             </div>
-                            <GripVertical className="size-3 text-zinc-300 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <GripVertical className="size-4 shrink-0 text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100" />
                           </div>
-                          <p className="text-[11px] text-zinc-500 mb-2 line-clamp-1">{lead.title}</p>
-                          {lead.contact?.phone_number && (
-                            <p className="text-[10px] text-zinc-400 mb-2">{lead.contact.phone_number}</p>
-                          )}
-                          <div className="flex flex-wrap gap-1 mb-2">
+                          <p className="mb-2.5 line-clamp-1 text-[11px] text-zinc-500 dark:text-zinc-400">{lead.title}</p>
+                          <div className="mb-2.5 flex flex-wrap gap-1">
                             {lead.tags.slice(0, 2).map((tag) => (
-                              <span key={tag} className="rounded-full bg-zinc-100 px-2 py-0.5 text-[9px] font-medium text-zinc-600">
+                              <span key={tag} className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[9px] font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                                 {tag}
                               </span>
                             ))}
                           </div>
-                          <div className="flex items-center justify-between text-[10px] text-zinc-400 dark:text-zinc-500">
-                            {lead.value && (
-                              <span className="flex items-center gap-0.5 font-medium text-zinc-600">
-                                {formatCurrency(lead.value)}
-                              </span>
-                            )}
-                            {lead.expected_close_date && (
-                              <span className="flex items-center gap-0.5">
-                                <Calendar className="size-2.5" />
-                                {format(new Date(lead.expected_close_date), 'MMM d')}
-                              </span>
-                            )}
+                          <div className="flex items-center justify-between border-t border-zinc-100 pt-2.5 dark:border-zinc-800">
+                            <SourceIcon source={lead.source} className="size-3.5" />
+                            <div className="flex items-center gap-2">
+                              {lead.expected_close_date && (
+                                <span className="flex items-center gap-0.5 text-[10px] text-zinc-400">
+                                  <Calendar className="size-2.5" />
+                                  {format(new Date(lead.expected_close_date), 'MMM d')}
+                                </span>
+                              )}
+                              {lead.value ? (
+                                <span className="rounded-md bg-orange-50 px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
+                                  {formatCurrency(lead.value)}
+                                </span>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
                       ))}
                       {stageLeads.length === 0 && (
-                        <div className="rounded-lg border border-dashed border-zinc-200 px-3 py-6 text-center">
-                          <p className="text-xs text-zinc-400 dark:text-zinc-500">No leads here</p>
+                        <div className="rounded-xl border border-dashed border-zinc-200 px-3 py-8 text-center dark:border-zinc-800">
+                          <p className="text-xs text-zinc-400 dark:text-zinc-500">Drop leads here</p>
                         </div>
                       )}
                     </div>
@@ -311,13 +326,13 @@ export default function PipelineBoard({ workspaceId, leads: initialLeads }: Pipe
                   return (
                     <tr
                       key={lead.id}
-                      className="hover:bg-zinc-50 cursor-pointer transition-colors"
+                      className="cursor-pointer transition-colors hover:bg-orange-50/40 dark:hover:bg-zinc-800/50"
                       onClick={() => setSelectedLead(lead)}
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <Avatar className="size-7">
-                            <AvatarFallback className="bg-zinc-200 text-xs text-zinc-700">
+                            <AvatarFallback className="text-[10px] font-bold text-white" style={{ backgroundImage: 'var(--brand-gradient)' }}>
                               {getInitials(lead.contact?.name ?? 'U')}
                             </AvatarFallback>
                           </Avatar>
@@ -393,8 +408,8 @@ export default function PipelineBoard({ workspaceId, leads: initialLeads }: Pipe
                     </div>
                     <div>
                       <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Source</label>
-                      <p className="mt-1 text-sm text-zinc-700 capitalize">
-                        {getSourceIcon(selectedLead.source)} {selectedLead.source.replace('_', ' ')}
+                      <p className="mt-1 flex items-center gap-1.5 text-sm capitalize text-zinc-700 dark:text-zinc-300">
+                        <SourceIcon source={selectedLead.source} className="size-4" /> {selectedLead.source.replace('_', ' ')}
                       </p>
                     </div>
                     <div>
@@ -465,18 +480,23 @@ export default function PipelineBoard({ workspaceId, leads: initialLeads }: Pipe
                     <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-3 block">Activity Timeline</label>
                     <div className="space-y-3">
                       {[
-                        { icon: '🤖', text: 'AI qualified lead — budget and location collected', time: '2 days ago' },
-                        { icon: '📝', text: 'Status changed: New → Qualified', time: '5 days ago' },
-                        { icon: '💬', text: 'Lead created from WhatsApp conversation', time: '7 days ago' },
-                      ].map((act, i) => (
-                        <div key={i} className="flex gap-3 text-xs">
-                          <span className="shrink-0 mt-0.5">{act.icon}</span>
-                          <div>
-                            <p className="text-zinc-700">{act.text}</p>
-                            <p className="text-zinc-400 mt-0.5">{act.time}</p>
+                        { icon: Bot, tint: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400', text: 'AI qualified lead — budget and location collected', time: '2 days ago' },
+                        { icon: Pencil, tint: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400', text: 'Status changed: New → Qualified', time: '5 days ago' },
+                        { icon: MessageSquare, tint: 'bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400', text: 'Lead created from WhatsApp conversation', time: '7 days ago' },
+                      ].map((act, i) => {
+                        const Icon = act.icon
+                        return (
+                          <div key={i} className="flex gap-3 text-xs">
+                            <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-lg', act.tint)}>
+                              <Icon className="size-3.5" />
+                            </span>
+                            <div className="pt-0.5">
+                              <p className="text-zinc-700 dark:text-zinc-300">{act.text}</p>
+                              <p className="text-zinc-400 mt-0.5">{act.time}</p>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
 

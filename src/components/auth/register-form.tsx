@@ -82,9 +82,9 @@ export default function RegisterForm() {
         <div className="w-full max-w-md rounded-2xl border p-8 text-center"
           style={{ backgroundColor: 'var(--wa-surface)', borderColor: 'var(--wa-border)' }}>
           <div className="mb-4 flex justify-center">
-            <div className="flex size-16 items-center justify-center rounded-full"
-              style={{ backgroundColor: 'rgba(0,168,132,0.12)' }}>
-              <MessageSquare className="size-8" style={{ color: 'var(--wa-green)' }} />
+            <div className="flex size-16 items-center justify-center rounded-2xl text-white shadow-md"
+              style={{ backgroundImage: 'var(--brand-gradient)' }}>
+              <MessageSquare className="size-8" />
             </div>
           </div>
           <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--wa-text-primary)' }}>Check your email!</h2>
@@ -93,7 +93,7 @@ export default function RegisterForm() {
           </p>
           <Link href="/login"
             className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold text-white hover:opacity-90"
-            style={{ backgroundColor: 'var(--wa-green)' }}>
+            style={{ backgroundColor: 'var(--brand)' }}>
             Back to Sign in
           </Link>
         </div>
@@ -109,7 +109,7 @@ export default function RegisterForm() {
       {/* ── Left Panel ─────────────────────────────────────────────────────── */}
       <div
         className="relative overflow-hidden md:w-[45%] md:min-h-screen flex-shrink-0"
-        style={{ background: 'linear-gradient(160deg, #075e54 0%, #128c7e 45%, #00a884 80%, #25d366 100%)' }}
+        style={{ background: 'linear-gradient(160deg, #7c2d12 0%, #c2410c 38%, #ea580c 68%, #fb923c 100%)' }}
       >
         {/* ── MOBILE: compact top banner ─────────────────────────────────── */}
         <div className="flex items-center gap-3 px-5 py-4 md:hidden">
@@ -192,8 +192,8 @@ export default function RegisterForm() {
           {/* Demo banner */}
           {isDemoMode && (
             <div className="mb-5 rounded-xl border px-4 py-3 text-xs"
-              style={{ backgroundColor: 'rgba(0,168,132,0.08)', borderColor: 'rgba(0,168,132,0.3)', color: 'var(--wa-text-secondary)' }}>
-              <strong style={{ color: 'var(--wa-green)' }}>Demo Mode</strong> — Registration goes straight to dashboard.
+              style={{ backgroundColor: 'rgba(249,115,22,0.08)', borderColor: 'rgba(249,115,22,0.3)', color: 'var(--wa-text-secondary)' }}>
+              <strong style={{ color: 'var(--brand)' }}>Demo Mode</strong> — Registration goes straight to dashboard.
             </div>
           )}
 
@@ -215,7 +215,7 @@ export default function RegisterForm() {
                   placeholder="Shivansh Patidar" required
                   className="w-full rounded-xl border px-4 py-3 pl-10 text-sm outline-none transition-all"
                   style={{ backgroundColor: 'var(--wa-surface)', borderColor: 'var(--wa-border)', color: 'var(--wa-text-primary)' }}
-                  onFocus={(e) => (e.target.style.borderColor = 'var(--wa-green)')}
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--brand)')}
                   onBlur={(e) => (e.target.style.borderColor = 'var(--wa-border)')}
                 />
               </div>
@@ -230,7 +230,7 @@ export default function RegisterForm() {
                   placeholder="you@example.com" required
                   className="w-full rounded-xl border px-4 py-3 pl-10 text-sm outline-none transition-all"
                   style={{ backgroundColor: 'var(--wa-surface)', borderColor: 'var(--wa-border)', color: 'var(--wa-text-primary)' }}
-                  onFocus={(e) => (e.target.style.borderColor = 'var(--wa-green)')}
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--brand)')}
                   onBlur={(e) => (e.target.style.borderColor = 'var(--wa-border)')}
                 />
               </div>
@@ -246,7 +246,7 @@ export default function RegisterForm() {
                   placeholder="Min. 8 characters" required
                   className="w-full rounded-xl border px-4 py-3 pl-10 pr-12 text-sm outline-none transition-all"
                   style={{ backgroundColor: 'var(--wa-surface)', borderColor: 'var(--wa-border)', color: 'var(--wa-text-primary)' }}
-                  onFocus={(e) => (e.target.style.borderColor = 'var(--wa-green)')}
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--brand)')}
                   onBlur={(e) => (e.target.style.borderColor = 'var(--wa-border)')}
                 />
                 <button type="button" onClick={() => setShowPass(!showPass)}
@@ -272,7 +272,7 @@ export default function RegisterForm() {
                     borderColor: form.confirm && form.confirm !== form.password ? 'var(--color-error)' : 'var(--wa-border)',
                     color: 'var(--wa-text-primary)',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = 'var(--wa-green)')}
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--brand)')}
                   onBlur={(e) => (e.target.style.borderColor =
                     form.confirm && form.confirm !== form.password ? '#ef4444' : 'var(--wa-border)')}
                 />
@@ -293,9 +293,9 @@ export default function RegisterForm() {
             {/* Terms */}
             <p className="text-xs" style={{ color: 'var(--wa-text-tertiary)' }}>
               By creating an account you agree to our{' '}
-              <Link href="/terms" className="hover:underline" style={{ color: 'var(--wa-green)' }}>Terms</Link>
+              <Link href="/terms" className="hover:underline" style={{ color: 'var(--brand)' }}>Terms</Link>
               {' '}and{' '}
-              <Link href="/privacy" className="hover:underline" style={{ color: 'var(--wa-green)' }}>Privacy Policy</Link>.
+              <Link href="/privacy" className="hover:underline" style={{ color: 'var(--brand)' }}>Privacy Policy</Link>.
             </p>
 
             {/* Submit */}
@@ -304,7 +304,7 @@ export default function RegisterForm() {
                 'flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition-all',
                 loading ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90 active:scale-[0.98]'
               )}
-              style={{ backgroundColor: 'var(--wa-green)' }}>
+              style={{ backgroundImage: 'var(--brand-gradient)', boxShadow: 'var(--brand-glow)' }}>
               {loading
                 ? <><Loader2 className="size-4 animate-spin" />Creating account...</>
                 : <><span>Create account</span><ArrowRight className="size-4" /></>}
@@ -313,7 +313,7 @@ export default function RegisterForm() {
 
           <p className="mt-5 text-center text-sm" style={{ color: 'var(--wa-text-secondary)' }}>
             Already have an account?{' '}
-            <Link href="/login" className="font-semibold hover:underline" style={{ color: 'var(--wa-green)' }}>
+            <Link href="/login" className="font-semibold hover:underline" style={{ color: 'var(--brand)' }}>
               Sign in
             </Link>
           </p>
@@ -327,12 +327,12 @@ export default function RegisterForm() {
             <a href="https://www.instagram.com/shivansh.js/" target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 transition-opacity hover:opacity-80">
               <svg viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8"
-                strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--wa-green)' }}>
+                strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--brand)' }}>
                 <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
                 <circle cx="12" cy="12" r="4" />
                 <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none" />
               </svg>
-              <span className="text-[11px] font-medium" style={{ color: 'var(--wa-green)' }}>@shivansh.js</span>
+              <span className="text-[11px] font-medium" style={{ color: 'var(--brand)' }}>@shivansh.js</span>
             </a>
           </div>
 

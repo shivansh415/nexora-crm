@@ -1,109 +1,166 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 /* ─── Tailwind v4: class-based dark mode ─────────────────────────────────── */
 @variant dark (&:where(.dark, .dark *));
 
-/* ─── Tailwind v4: remap zinc scale → WhatsApp adaptive palette ──────────── */
-/* This makes bg-zinc-*, border-zinc-*, text-zinc-* automatically adapt to    */
-/* the WhatsApp theme in both light and dark mode without per-page classes.    */
+/* ═══════════════════════════════════════════════════════════════════════════
+   VOBIZ CRM — World-class White + Orange design system
+   Brand: vibrant orange   ·   Surfaces: warm white   ·   Chrome: warm charcoal
+   Chat stays WhatsApp-authentic. Everything else is premium & on-brand.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Static design tokens (fonts, radius, brand, adaptive scales) ────────── */
 @theme {
-  /* Light surfaces → WhatsApp light grays; Dark surfaces → WhatsApp dark teal */
-  --color-zinc-50:  var(--wa-bg);           /* page backgrounds, row stripes  */
-  --color-zinc-100: var(--wa-surface-2);    /* hover states, chips, tags       */
-  --color-zinc-200: var(--wa-border);       /* borders, dividers               */
-  --color-zinc-300: var(--wa-border-hover); /* stronger borders                */
+  /* Typography */
+  --font-sans:    'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-heading: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 
-  /* Text colors */
-  --color-zinc-400: var(--wa-text-tertiary);  /* placeholders, timestamps      */
-  --color-zinc-500: var(--wa-text-secondary); /* captions, meta info           */
+  /* Radius scale — friendly, premium */
+  --radius-sm:  0.5rem;
+  --radius-md:  0.625rem;
+  --radius-lg:  0.75rem;
+  --radius-xl:  1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 2rem;
+
+  /* zinc scale remapped to the warm adaptive palette (drives all hardcoded zinc utility classes) */
+  --color-zinc-50:  var(--wa-bg);
+  --color-zinc-100: var(--wa-surface-2);
+  --color-zinc-200: var(--wa-border);
+  --color-zinc-300: var(--wa-border-hover);
+  --color-zinc-400: var(--wa-text-tertiary);
+  --color-zinc-500: var(--wa-text-secondary);
   --color-zinc-600: var(--wa-text-secondary);
-  --color-zinc-700: var(--wa-text-muted);     /* slightly strong secondary     */
+  --color-zinc-700: var(--wa-text-muted);
 
-  /* Keep zinc-800/900/950 as dark — used for primary buttons, dark accents   */
-  /* These intentionally stay dark in both modes.                             */
+  /* Brand orange — use as bg-brand / text-brand / border-brand */
+  --color-brand:        #f97316;
+  --color-brand-strong: #ea580c;
+  --color-brand-dark:   #c2410c;
+  --color-brand-soft:   #fff4ea;
 
-  /* WhatsApp green — use as bg-wa-green, text-wa-green, border-wa-green */
-  --color-wa-green:       #00a884;
-  --color-wa-green-light: #dcf8c6;   /* very light green highlight */
-  --color-wa-teal:        #128c7e;   /* WhatsApp darker teal       */
+  /* WhatsApp green — reserved for chat + AI/online semantics (bg-wa-green, text-wa-green) */
+  --color-wa-green:       #12a150;
+  --color-wa-green-light: #dcf8c6;
+  --color-wa-teal:        #0e8a44;
 }
 
-/* ─── WhatsApp CSS Variables — Light (default) ───────────────────────────── */
+/* ─── Shadcn / base-ui semantic tokens → generate utilities that respect dark ── */
+/* These were previously NEVER wired up, so bg-primary/bg-card/text-muted-foreground/
+   ring-ring/etc. produced no CSS. Wiring them here properly styles the whole
+   component library (Button, Card, Badge, Input, Dialog, Select, Tabs …). */
+@theme inline {
+  --color-background:            var(--background);
+  --color-foreground:            var(--foreground);
+  --color-card:                  var(--card);
+  --color-card-foreground:       var(--card-foreground);
+  --color-popover:               var(--popover);
+  --color-popover-foreground:    var(--popover-foreground);
+  --color-primary:               var(--primary);
+  --color-primary-foreground:    var(--primary-foreground);
+  --color-secondary:             var(--secondary);
+  --color-secondary-foreground:  var(--secondary-foreground);
+  --color-muted:                 var(--muted);
+  --color-muted-foreground:      var(--muted-foreground);
+  --color-accent:                var(--accent);
+  --color-accent-foreground:     var(--accent-foreground);
+  --color-destructive:           var(--destructive);
+  --color-destructive-foreground:var(--destructive-foreground);
+  --color-border:                var(--border);
+  --color-input:                 var(--input);
+  --color-ring:                  var(--ring);
+}
+
+/* ─── Design variables — Light (default) ─────────────────────────────────── */
 @layer base {
   :root {
-    /* ── WhatsApp palette ───────────────────────────────────── */
-    --wa-green:          #00a884;     /* Primary brand teal-green   */
-    --wa-green-hover:    #008f72;
-    --wa-green-dark:     #005c4b;     /* Dark mode outbound bubbles */
-    --wa-green-light:    #dcf8c6;     /* Light mode green tint      */
-    --wa-teal:           #128c7e;     /* Darker WhatsApp teal       */
+    /* ── Brand orange ─────────────────────────────────────── */
+    --brand:            #f97316;   /* orange-500 — vibrant */
+    --brand-hover:      #ea580c;   /* orange-600 */
+    --brand-strong:     #ea580c;
+    --brand-active:     #c2410c;   /* orange-700 */
+    --brand-light:      #fb923c;   /* orange-400 */
+    --brand-soft:       #fff4ea;   /* softest tint bg */
+    --brand-tint:       #ffe6d0;   /* tint */
+    --brand-fg:         #ffffff;
+    --brand-gradient:   linear-gradient(135deg, #fb923c 0%, #f97316 48%, #ea580c 100%);
+    --brand-glow:       0 10px 30px -8px rgb(249 115 22 / 0.45);
 
-    /* Light mode backgrounds */
-    --wa-bg:             #f0f2f5;     /* Main page bg — WhatsApp light gray */
-    --wa-surface:        #ffffff;     /* Cards, panels                      */
-    --wa-surface-2:      #f0f2f5;     /* Hover rows, chips, table stripes   */
-    --wa-border:         #e9edef;     /* Borders & dividers                 */
-    --wa-border-hover:   #d1d7db;     /* Stronger borders on hover          */
+    /* ── WhatsApp green (chat + AI/online semantics only) ─── */
+    --wa-green:          #12a150;
+    --wa-green-hover:    #0e8a44;
+    --wa-green-dark:     #005c4b;
+    --wa-green-light:    #dcf8c6;
+    --wa-teal:           #0e8a44;
 
-    /* Text */
-    --wa-text-primary:   #111b21;     /* Primary text — WhatsApp dark       */
-    --wa-text-muted:     #3b4a54;     /* Slightly muted primary             */
-    --wa-text-secondary: #54656f;     /* Secondary text                     */
-    --wa-text-tertiary:  #8696a0;     /* Timestamps, placeholders           */
+    /* ── Light surfaces — warm white ──────────────────────── */
+    --wa-bg:             #faf8f5;   /* page background — warm off-white */
+    --wa-surface:        #ffffff;   /* cards, panels */
+    --wa-surface-2:      #f4f1ea;   /* hover rows, chips, stripes */
+    --wa-border:         #ece7de;   /* borders & dividers */
+    --wa-border-hover:   #ddd5c8;   /* stronger borders */
 
-    /* Chat area */
-    --wa-chat-bg:        #efeae2;     /* WhatsApp classic wallpaper (warm beige) */
-    --wa-chat-bg-dark:   #0b141a;     /* WhatsApp dark mode chat bg         */
+    /* ── Text — warm charcoal ─────────────────────────────── */
+    --wa-text-primary:   #1c1917;
+    --wa-text-muted:     #44403c;
+    --wa-text-secondary: #78716c;
+    --wa-text-tertiary:  #a8a29e;
 
-    /* Bubble colors — light mode */
-    --wa-bubble-in:      #ffffff;     /* Inbound: white                     */
-    --wa-bubble-in-text: #111b21;
-    --wa-bubble-out:     #d9fdd3;     /* Outbound AI: WhatsApp green        */
+    /* ── Chat area — WhatsApp classic ─────────────────────── */
+    --wa-chat-bg:        #ece5dd;
+    --wa-chat-bg-dark:   #0e0b08;
+
+    /* ── Bubbles — WhatsApp authentic (light) ─────────────── */
+    --wa-bubble-in:      #ffffff;
+    --wa-bubble-in-text: #1c1917;
+    --wa-bubble-out:     #d9fdd3;   /* AI outbound — WhatsApp green */
     --wa-bubble-out-text:#0a2918;
-    --wa-bubble-agent:   #e1f3fb;     /* Agent: light blue                  */
-    --wa-bubble-agent-text: #0d1b2e;
+    --wa-bubble-agent:   #ffe8d6;   /* Agent outbound — warm peach (on-brand) */
+    --wa-bubble-agent-text: #7c2d12;
 
-    /* Sidebar — ALWAYS dark (like WhatsApp Web desktop) */
-    --sidebar-bg:        #111b21;
-    --sidebar-active:    #2a3942;
-    --sidebar-hover:     #202c33;
-    --sidebar-border:    #1f2c34;
-    --sidebar-text:      #e9edef;
-    --sidebar-text-muted:#8696a0;
-    --sidebar-badge:     #00a884;
+    /* ── Sidebar — warm charcoal, always dark ─────────────── */
+    --sidebar-bg:        #1b1613;
+    --sidebar-active:    #2c2520;
+    --sidebar-hover:     #241e19;
+    --sidebar-border:    #322b24;
+    --sidebar-text:      #f5f1ea;
+    --sidebar-text-muted:#a89f94;
+    --sidebar-badge:     #f97316;
     --sidebar-badge-fg:  #ffffff;
 
-    /* ── shadcn/ui tokens (keep for component compatibility) ── */
-    --background: 0 0% 100%;
-    --foreground: 200 14% 7%;
-    --card: 0 0% 100%;
-    --card-foreground: 200 14% 7%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 200 14% 7%;
-    --primary: 168 83% 33%;            /* WhatsApp teal as primary! */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 11% 95%;
-    --secondary-foreground: 200 14% 7%;
-    --muted: 210 11% 95%;
-    --muted-foreground: 200 11% 39%;
-    --accent: 210 11% 95%;
-    --accent-foreground: 200 14% 7%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 200 11% 91%;
-    --input: 200 11% 91%;
-    --ring: 168 83% 33%;
-    --radius: 0.5rem;
+    /* ── Shadcn semantic tokens (hex → wired via @theme inline) ── */
+    --background:              #faf8f5;
+    --foreground:              #1c1917;
+    --card:                    #ffffff;
+    --card-foreground:         #1c1917;
+    --popover:                 #ffffff;
+    --popover-foreground:      #1c1917;
+    --primary:                 #ea580c;
+    --primary-foreground:      #ffffff;
+    --secondary:               #f4f1ea;
+    --secondary-foreground:    #292524;
+    --muted:                   #f4f1ea;
+    --muted-foreground:        #78716c;
+    --accent:                  #fff1e6;   /* soft orange for interactive accents */
+    --accent-foreground:       #9a3412;
+    --destructive:             #dc2626;
+    --destructive-foreground:  #ffffff;
+    --border:                  #ece7de;
+    --input:                   #e6ded2;
+    --ring:                    #f97316;
+    --radius:                  0.625rem;
 
     /* ── Layout ───────────────────────────────────────────── */
-    --sidebar-width:      240px;
+    --sidebar-width:      248px;
     --mobile-nav-height:  60px;
 
     /* ── Status colors ────────────────────────────────────── */
-    --color-success:      #00a884;
-    --color-success-bg:   #dcf8c6;
-    --color-success-fg:   #0a2918;
+    --color-success:      #16a34a;
+    --color-success-bg:   #dcfce7;
+    --color-success-fg:   #15803d;
     --color-warning:      #f59e0b;
     --color-warning-bg:   #fffbeb;
     --color-warning-fg:   #92400e;
@@ -114,87 +171,64 @@
     --color-info-bg:      #eff6ff;
     --color-info-fg:      #1d4ed8;
 
-    /* ── Aliases used by existing code ───────────────────── */
-    --color-background:   var(--wa-bg);
-    --color-surface:      var(--wa-surface);
-    --color-surface-2:    var(--wa-surface-2);
-    --color-border:       var(--wa-border);
-    --color-border-hover: var(--wa-border-hover);
-    --color-text-primary:   var(--wa-text-primary);
-    --color-text-secondary: var(--wa-text-secondary);
-    --color-text-tertiary:  var(--wa-text-tertiary);
-    --color-text-inverse:   #ffffff;
-    --color-accent:         var(--wa-green);
-    --color-accent-hover:   var(--wa-green-hover);
-    --color-accent-fg:      #ffffff;
-    --color-bubble-inbound:         var(--wa-bubble-in);
-    --color-bubble-inbound-text:    var(--wa-bubble-in-text);
-    --color-bubble-outbound-ai:     var(--wa-bubble-out);
-    --color-bubble-outbound-ai-text:var(--wa-bubble-out-text);
-    --color-bubble-outbound-agent:  var(--wa-bubble-agent);
-    --color-bubble-outbound-agent-text: var(--wa-bubble-agent-text);
-    --color-ai-active:      var(--wa-green);
-    --color-human-takeover: #2563eb;
-    --color-ai-paused:      #f59e0b;
-
-    --shadow-sm:  0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md:  0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-    --shadow-lg:  0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+    /* ── Premium layered shadows (warm-tinted) ────────────── */
+    --shadow-xs:  0 1px 2px 0 rgb(28 25 23 / 0.05);
+    --shadow-sm:  0 1px 3px 0 rgb(28 25 23 / 0.07), 0 1px 2px -1px rgb(28 25 23 / 0.05);
+    --shadow-md:  0 4px 14px -3px rgb(28 25 23 / 0.09), 0 2px 6px -3px rgb(28 25 23 / 0.06);
+    --shadow-lg:  0 14px 34px -8px rgb(28 25 23 / 0.14), 0 6px 14px -8px rgb(28 25 23 / 0.08);
+    --shadow-xl:  0 26px 55px -12px rgb(28 25 23 / 0.22);
   }
 }
 
-/* ─── WhatsApp CSS Variables — Dark mode ─────────────────────────────────── */
+/* ─── Design variables — Dark mode ───────────────────────────────────────── */
 @layer base {
   html.dark {
-    /* WhatsApp dark mode backgrounds */
-    --wa-bg:             #111b21;     /* Main page bg — WhatsApp darkest    */
-    --wa-surface:        #202c33;     /* Cards, panels                      */
-    --wa-surface-2:      #2a3942;     /* Hover rows, chips                  */
-    --wa-border:         #3b4a54;     /* Borders — visible but subtle       */
-    --wa-border-hover:   #4a5d6a;
+    /* Warm neutral dark + orange accents */
+    --wa-bg:             #14110e;
+    --wa-surface:        #1e1a16;
+    --wa-surface-2:      #29241e;
+    --wa-border:         #35302a;
+    --wa-border-hover:   #48413a;
 
-    /* Text — WhatsApp dark mode */
-    --wa-text-primary:   #e9edef;
-    --wa-text-muted:     #b0bec5;
-    --wa-text-secondary: #8696a0;
-    --wa-text-tertiary:  #54656f;
+    --wa-text-primary:   #f5f1ea;
+    --wa-text-muted:     #c4bdb4;
+    --wa-text-secondary: #a89f94;
+    --wa-text-tertiary:  #6f675e;
 
-    /* Chat area — dark */
-    --wa-chat-bg:        #0b141a;     /* WhatsApp dark wallpaper            */
+    --wa-chat-bg:        #0e0b08;
 
-    /* Bubble colors — dark mode */
-    --wa-bubble-in:      #202c33;     /* Inbound dark                       */
-    --wa-bubble-in-text: #e9edef;
-    --wa-bubble-out:     #005c4b;     /* Outbound AI dark green             */
+    --wa-bubble-in:      #1e1a16;
+    --wa-bubble-in-text: #f5f1ea;
+    --wa-bubble-out:     #06513f;
     --wa-bubble-out-text:#dcf8c6;
-    --wa-bubble-agent:   #1d3a4f;     /* Agent dark blue                    */
-    --wa-bubble-agent-text: #93c5fd;
+    --wa-bubble-agent:   #4a2610;
+    --wa-bubble-agent-text: #fed7aa;
 
-    /* Sidebar stays the SAME — always dark */
+    /* Sidebar stays the same warm charcoal */
 
-    /* ── shadcn/ui tokens — dark ──────────────────────────── */
-    --background: 201 28% 9%;
-    --foreground: 200 10% 93%;
-    --card: 200 23% 15%;
-    --card-foreground: 200 10% 93%;
-    --popover: 200 23% 15%;
-    --popover-foreground: 200 10% 93%;
-    --primary: 168 83% 33%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 200 19% 19%;
-    --secondary-foreground: 200 10% 93%;
-    --muted: 200 19% 19%;
-    --muted-foreground: 200 10% 54%;
-    --accent: 200 19% 19%;
-    --accent-foreground: 200 10% 93%;
-    --destructive: 0 62% 50%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 200 16% 28%;
-    --input: 200 16% 28%;
-    --ring: 168 83% 33%;
+    /* Shadcn tokens — dark */
+    --background:              #14110e;
+    --foreground:              #f5f1ea;
+    --card:                    #1e1a16;
+    --card-foreground:         #f5f1ea;
+    --popover:                 #1e1a16;
+    --popover-foreground:      #f5f1ea;
+    --primary:                 #f97316;
+    --primary-foreground:      #1a0e05;
+    --secondary:               #29241e;
+    --secondary-foreground:    #f5f1ea;
+    --muted:                   #26221d;
+    --muted-foreground:        #a89f94;
+    --accent:                  #3a2415;
+    --accent-foreground:       #fdba74;
+    --destructive:             #ef4444;
+    --destructive-foreground:  #ffffff;
+    --border:                  #35302a;
+    --input:                   #3a342d;
+    --ring:                    #f97316;
 
-    /* ── Status — dark mode ───────────────────────────────── */
-    --color-success:      #00a884;
+    /* Status — dark mode */
+    --color-success:      #22c55e;
     --color-success-bg:   #052e16;
     --color-success-fg:   #86efac;
     --color-warning:      #f59e0b;
@@ -207,228 +241,154 @@
     --color-info-bg:      #0d1f3c;
     --color-info-fg:      #93c5fd;
 
-    /* ── Aliases ──────────────────────────────────────────── */
-    --color-background:   var(--wa-bg);
-    --color-surface:      var(--wa-surface);
-    --color-surface-2:    var(--wa-surface-2);
-    --color-border:       var(--wa-border);
-    --color-border-hover: var(--wa-border-hover);
-    --color-text-primary:   var(--wa-text-primary);
-    --color-text-secondary: var(--wa-text-secondary);
-    --color-text-tertiary:  var(--wa-text-tertiary);
-    --color-text-inverse:   #111b21;
-    --color-bubble-inbound:         var(--wa-bubble-in);
-    --color-bubble-inbound-text:    var(--wa-bubble-in-text);
-    --color-bubble-outbound-ai:     var(--wa-bubble-out);
-    --color-bubble-outbound-ai-text:var(--wa-bubble-out-text);
-    --color-bubble-outbound-agent:  var(--wa-bubble-agent);
-    --color-bubble-outbound-agent-text: var(--wa-bubble-agent-text);
+    --shadow-xs:  0 1px 2px 0 rgb(0 0 0 / 0.4);
+    --shadow-sm:  0 1px 3px 0 rgb(0 0 0 / 0.5), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+    --shadow-md:  0 4px 14px -3px rgb(0 0 0 / 0.55), 0 2px 6px -3px rgb(0 0 0 / 0.4);
+    --shadow-lg:  0 14px 34px -8px rgb(0 0 0 / 0.6), 0 6px 14px -8px rgb(0 0 0 / 0.45);
+    --shadow-xl:  0 26px 55px -12px rgb(0 0 0 / 0.7);
 
-    --shadow-sm:  0 1px 2px 0 rgb(0 0 0 / 0.4);
-    --shadow-md:  0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
-    --shadow-lg:  0 10px 15px -3px rgb(0 0 0 / 0.6), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    --brand-soft: #2a1a0e;
   }
 }
 
-/* ─── Global dark mode overrides (outside @layer → overrides Tailwind utils) */
-/* This is the KEY fix: adapts bg-white and other hardcoded classes globally  */
-/* WITHOUT touching individual page or component files.                        */
-
-html.dark .bg-white {
-  background-color: var(--wa-surface);
-}
-
-html.dark .bg-zinc-50 {
-  background-color: var(--wa-bg);
-}
-
-html.dark .bg-zinc-100 {
-  background-color: var(--wa-surface-2);
-}
-
-html.dark .border-zinc-200,
-html.dark .border-zinc-100 {
-  border-color: var(--wa-border);
-}
-
-html.dark .divide-zinc-50,
-html.dark .divide-zinc-100 {
-  --tw-divide-opacity: 1;
-  border-color: var(--wa-border);
-}
-
-html.dark .text-zinc-900 {
-  color: var(--wa-text-primary);
-}
-
-html.dark .text-zinc-700 {
-  color: var(--wa-text-muted);
-}
-
-html.dark .text-zinc-500 {
-  color: var(--wa-text-secondary);
-}
-
-html.dark .text-zinc-400 {
-  color: var(--wa-text-tertiary);
-}
-
-html.dark .hover\:bg-zinc-50:hover {
-  background-color: var(--wa-surface-2);
-}
-
-html.dark .hover\:bg-zinc-100:hover {
-  background-color: var(--wa-surface-2);
-}
+/* ─── Global dark-mode overrides for hardcoded utility classes ───────────── */
+/* Adapts bg-white and dark text classes globally, without touching pages.    */
+html.dark .bg-white          { background-color: var(--wa-surface); }
+html.dark .text-zinc-900     { color: var(--wa-text-primary); }
+html.dark .text-zinc-800     { color: var(--wa-text-primary); }
+html.dark .divide-zinc-50 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-zinc-100 > :not([hidden]) ~ :not([hidden]) { border-color: var(--wa-border); }
 
 /* ─── Base Styles ────────────────────────────────────────────────────────── */
 @layer base {
   * {
     border-color: var(--wa-border);
-    transition-property: background-color, border-color, color, opacity;
+    transition-property: background-color, border-color, color, opacity, box-shadow, transform;
     transition-duration: 150ms;
-    transition-timing-function: ease;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  html {
-    color-scheme: light;
-  }
-
-  html.dark {
-    color-scheme: dark;
-  }
+  html      { color-scheme: light; }
+  html.dark { color-scheme: dark; }
 
   body {
     background-color: var(--wa-bg);
     color: var(--wa-text-primary);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--font-sans);
     font-size: 14px;
     line-height: 1.6;
+    letter-spacing: -0.006em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
+  h1, h2, h3, h4, h5 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.02em;
+  }
+
+  /* Numeric alignment for stats/tables */
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+
+  /* Selection */
+  ::selection { background: rgb(249 115 22 / 0.22); color: inherit; }
+
   /* Scrollbar */
-  ::-webkit-scrollbar { width: 4px; height: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--wa-border); border-radius: 2px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--wa-border-hover); }
+  ::-webkit-scrollbar        { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track  { background: transparent; }
+  ::-webkit-scrollbar-thumb  { background: var(--wa-border-hover); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--wa-text-tertiary); background-clip: padding-box; }
 }
 
-/* ─── Skeleton Animation ─────────────────────────────────────────────────── */
-@keyframes skeleton-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+/* ─── Premium utility classes ────────────────────────────────────────────── */
+.brand-gradient      { background-image: var(--brand-gradient); }
+.brand-gradient-text {
+  background-image: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.brand-glow { box-shadow: var(--brand-glow); }
+
+.hover-lift { will-change: transform; }
+.hover-lift:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+
+.glass {
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  background-color: color-mix(in srgb, var(--wa-surface) 78%, transparent);
 }
 
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* ─── Skeleton ───────────────────────────────────────────────────────────── */
+@keyframes skeleton-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 .skeleton {
   animation: skeleton-pulse 1.5s ease-in-out infinite;
   background-color: var(--wa-surface-2);
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
-/* ─── Typing dots animation ──────────────────────────────────────────────── */
-@keyframes typing-dot {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-  30% { transform: translateY(-4px); opacity: 1; }
-}
-
-.typing-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  background: var(--wa-text-secondary);
-  border-radius: 50%;
-  animation: typing-dot 1.2s ease-in-out infinite;
-}
+/* ─── Typing dots ────────────────────────────────────────────────────────── */
+@keyframes typing-dot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-4px); opacity: 1; } }
+.typing-dot { display: inline-block; width: 6px; height: 6px; background: var(--wa-text-secondary); border-radius: 50%; animation: typing-dot 1.2s ease-in-out infinite; }
 .typing-dot:nth-child(2) { animation-delay: 0.2s; }
 .typing-dot:nth-child(3) { animation-delay: 0.4s; }
 
-/* ─── WhatsApp chat wallpaper background ─────────────────────────────────── */
+/* ─── WhatsApp chat wallpaper ────────────────────────────────────────────── */
 .chat-wallpaper {
   background-color: var(--wa-chat-bg);
-  /* Subtle WhatsApp-style pattern overlay */
   background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd' opacity='0.04'%3E%3Cpath d='M50 50c-13.807 0-25-11.193-25-25S36.193 0 50 0s25 11.193 25 25S63.807 50 50 50zm0-4c11.598 0 21-9.402 21-21S61.598 4 50 4 29 13.402 29 29s9.402 21 21 21z' fill='%23000'/%3E%3C/g%3E%3C/svg%3E");
 }
-
-html.dark .chat-wallpaper {
-  background-color: var(--wa-chat-bg);
-}
+html.dark .chat-wallpaper { background-color: var(--wa-chat-bg); }
 
 /* ─── Chat bubble tails ──────────────────────────────────────────────────── */
-.bubble-inbound::before {
-  content: '';
-  position: absolute;
-  left: -6px;
-  top: 0;
-  border-width: 0 8px 8px 0;
-  border-style: solid;
-  border-color: transparent var(--wa-bubble-in) transparent transparent;
-}
+.bubble-inbound::before { content: ''; position: absolute; left: -6px; top: 0; border-width: 0 8px 8px 0; border-style: solid; border-color: transparent var(--wa-bubble-in) transparent transparent; }
+.bubble-outbound::after { content: ''; position: absolute; right: -6px; top: 0; border-width: 0 0 8px 8px; border-style: solid; border-color: transparent transparent transparent var(--wa-bubble-out); }
 
-.bubble-outbound::after {
-  content: '';
-  position: absolute;
-  right: -6px;
-  top: 0;
-  border-width: 0 0 8px 8px;
-  border-style: solid;
-  border-color: transparent transparent transparent var(--wa-bubble-out);
-}
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+@keyframes count-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.count-up { animation: count-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-/* ─── Count-up animation ─────────────────────────────────────────────────── */
-@keyframes count-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+@keyframes message-slide-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.message-enter { animation: message-slide-up 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-.count-up {
-  animation: count-up 0.6s ease-out forwards;
-}
+@keyframes fade-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fade-up { animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
-/* ─── New message slide ──────────────────────────────────────────────────── */
-@keyframes message-slide-up {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+@keyframes scale-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+.animate-scale-in { animation: scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
-.message-enter {
-  animation: message-slide-up 0.2s ease-out forwards;
-}
+@keyframes shimmer { 100% { transform: translateX(100%); } }
 
-/* ─── Focus visible ring ─────────────────────────────────────────────────── */
-:focus-visible {
-  outline: 2px solid var(--wa-green);
-  outline-offset: 2px;
-}
+/* Stagger helpers */
+.stagger > *          { animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.stagger > *:nth-child(1) { animation-delay: 0.04s; }
+.stagger > *:nth-child(2) { animation-delay: 0.09s; }
+.stagger > *:nth-child(3) { animation-delay: 0.14s; }
+.stagger > *:nth-child(4) { animation-delay: 0.19s; }
+.stagger > *:nth-child(5) { animation-delay: 0.24s; }
+.stagger > *:nth-child(6) { animation-delay: 0.29s; }
 
-/* ─── Mobile safe area support ───────────────────────────────────────────── */
+/* ─── Focus ring ─────────────────────────────────────────────────────────── */
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* ─── Mobile safe area ───────────────────────────────────────────────────── */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
-  .mobile-nav-safe {
-    padding-bottom: calc(8px + env(safe-area-inset-bottom));
-  }
+  .mobile-nav-safe { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
 }
 
-/* ─── Theme transition — prevent flash on load ───────────────────────────── */
-.no-transition * {
-  transition: none !important;
+/* ─── Prevent flash on theme load ────────────────────────────────────────── */
+.no-transition * { transition: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
-/* ─── WhatsApp sidebar utility classes ───────────────────────────────────── */
-.wa-sidebar {
-  background-color: var(--sidebar-bg);
-  border-right: 1px solid var(--sidebar-border);
-}
-.wa-sidebar-item {
-  color: var(--sidebar-text);
-}
-.wa-sidebar-item:hover {
-  background-color: var(--sidebar-hover);
-}
-.wa-sidebar-item.active {
-  background-color: var(--sidebar-active);
-  border-right: 3px solid var(--wa-green);
-}
-.wa-sidebar-muted {
-  color: var(--sidebar-text-muted);
-}
+/* ─── Sidebar utility classes (legacy support) ───────────────────────────── */
+.wa-sidebar { background-color: var(--sidebar-bg); border-right: 1px solid var(--sidebar-border); }
+.wa-sidebar-item { color: var(--sidebar-text); }
+.wa-sidebar-item:hover { background-color: var(--sidebar-hover); }
+.wa-sidebar-item.active { background-color: var(--sidebar-active); border-right: 3px solid var(--brand); }
+.wa-sidebar-muted { color: var(--sidebar-text-muted); }
