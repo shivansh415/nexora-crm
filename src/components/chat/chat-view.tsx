@@ -95,14 +95,40 @@ function getDateSeparator(dateStr: string): string {
   return format(d, 'MMMM d, yyyy')
 }
 
-function MessageStatus({ status }: { status: string }) {
+// Maps a Meta failure code to a short, human label shown on failed messages.
+function friendlyFailure(code?: number, reason?: string): string {
+  switch (code) {
+    case 131042: return 'Payment issue'
+    case 131047: return '24h window closed'
+    case 131049: return 'Blocked by Meta limit'
+    case 131026: return 'Undeliverable'
+    case 131051: return 'Unsupported message type'
+    case 132000:
+    case 132001:
+    case 132005:
+    case 132007:
+    case 132012: return 'Template error'
+    case 133010: return 'Number not registered'
+    default: return reason || 'Not delivered'
+  }
+}
+
+function MessageStatus({ status, metadata }: { status: string; metadata?: unknown }) {
   if (status === 'read') return <CheckCheck className="size-3 text-blue-500" />
   if (status === 'delivered') return <CheckCheck className="size-3 text-zinc-400" />
   if (status === 'sent') return <Check className="size-3 text-zinc-400" />
   if (status === 'failed') {
+    const m = (metadata && typeof metadata === 'object' ? metadata : {}) as Record<string, unknown>
+    const code = typeof m.failureCode === 'number' ? (m.failureCode as number) : undefined
+    const reason = typeof m.failureReason === 'string' ? (m.failureReason as string) : undefined
+    const label = friendlyFailure(code, reason)
     return (
-      <span className="flex items-center gap-0.5 text-red-500" title="Not delivered by WhatsApp">
+      <span
+        className="flex items-center gap-0.5 text-red-500"
+        title={reason ? `Not delivered — ${reason}${code ? ` (Meta error ${code})` : ''}` : 'Not delivered by WhatsApp'}
+      >
         <AlertCircle className="size-3" />
+        <span className="text-[10px] font-medium">{label}</span>
       </span>
     )
   }
@@ -1220,7 +1246,7 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
                         <span className="text-[10px]" style={{ color: 'var(--wa-text-tertiary)' }}>
                           {format(new Date(msg.sent_at), 'h:mm a')}
                         </span>
-                        {!isInbound && <MessageStatus status={msg.status} />}
+                        {!isInbound && <MessageStatus status={msg.status} metadata={msg.metadata} />}
                       </div>
                     </div>
                   </div>
