@@ -505,9 +505,17 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
       })
       const data = await res.json()
       if (!res.ok) {
-        toast.error(data.error ?? 'Failed to send message', {
-          duration: data.windowClosed ? 8000 : 4000,
-        })
+        if (data.canReengage && selectedConvId) {
+          const convId = selectedConvId
+          toast.error(data.error ?? 'Message not delivered — the 24h window is closed.', {
+            duration: 10000,
+            action: { label: 'Reopen with template', onClick: () => handleReengage(convId) },
+          })
+        } else {
+          toast.error(data.error ?? 'Failed to send message', {
+            duration: data.windowClosed ? 8000 : 4000,
+          })
+        }
         return
       }
       setMessageText('')
@@ -516,6 +524,31 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
       toast.error('Network error — could not send message')
     } finally {
       setSending(false)
+    }
+  }
+
+  // ── Re-open a closed 24h window by sending an approved template ─────────────
+  async function handleReengage(convId: string) {
+    const t = toast.loading('Sending template…')
+    try {
+      const res = await fetch('/api/conversations/reengage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: convId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error ?? 'Could not send template', { id: t })
+        return
+      }
+      if (data.alreadyOpen) {
+        toast.success('This chat is already open — you can message normally.', { id: t })
+      } else {
+        toast.success('Template sent. The chat reopens for free replies once they respond.', { id: t })
+        setMessageText('')
+      }
+    } catch {
+      toast.error('Network error — could not send template', { id: t })
     }
   }
 
@@ -650,9 +683,17 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
       const res = await fetch('/api/messages/send-media', { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) {
-        toast.error(data.error ?? data.details ?? 'Failed to send attachment', {
-          duration: data.windowClosed ? 8000 : 4000,
-        })
+        if (data.canReengage && selectedConvId) {
+          const convId = selectedConvId
+          toast.error(data.error ?? 'Attachment not delivered — the 24h window is closed.', {
+            duration: 10000,
+            action: { label: 'Reopen with template', onClick: () => handleReengage(convId) },
+          })
+        } else {
+          toast.error(data.error ?? data.details ?? 'Failed to send attachment', {
+            duration: data.windowClosed ? 8000 : 4000,
+          })
+        }
         return
       }
       setMessageText('')
@@ -1198,19 +1239,24 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
           >
             {/* 24-hour window notice — free messages won't deliver when closed */}
             {selectedConvId && messages.length > 0 && !windowOpen && (
-              <div className="mb-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] leading-relaxed text-amber-800">
-                <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-500" />
-                <span>
-                  <span className="font-medium">24-hour reply window closed.</span>{' '}
-                  {lastInboundAt
-                    ? `${currentConv?.contact?.name ?? 'This contact'} hasn't replied in over 24 hours, `
-                    : `${currentConv?.contact?.name ?? 'This contact'} hasn't messaged you yet, `}
-                  so WhatsApp won&apos;t deliver a normal message. Send the approved template via{' '}
-                  <button onClick={() => setNewChatOpen(true)} className="font-medium underline underline-offset-2 hover:text-amber-900">
-                    New chat
-                  </button>{' '}
-                  to re-open it — free replies unlock for 24h once they message back.
-                </span>
+              <div className="mb-2 flex flex-col gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2.5 text-[12px] leading-relaxed text-orange-800 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-200">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="mt-0.5 size-4 shrink-0 text-orange-500" />
+                  <span>
+                    <span className="font-semibold">24-hour reply window closed.</span>{' '}
+                    {lastInboundAt
+                      ? `${currentConv?.contact?.name ?? 'This contact'} hasn't replied in over 24 hours, `
+                      : `${currentConv?.contact?.name ?? 'This contact'} hasn't messaged you yet, `}
+                    so WhatsApp won&apos;t deliver a normal message. Send the approved template to re-open the chat.
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleReengage(selectedConvId)}
+                  className="self-start inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+                  style={{ backgroundImage: 'var(--brand-gradient)' }}
+                >
+                  <Send className="size-3" /> Reopen with Template
+                </button>
               </div>
             )}
             {/* AI status bar */}

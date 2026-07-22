@@ -52,7 +52,52 @@ export async function POST(req: NextRequest) {
         .limit(1)
 
       if (existingConvs && existingConvs.length > 0) {
-        return NextResponse.json({ ok: true, conversationId: existingConvs[0].id, existed: true })
+        const conversationId = existingConvs[0].id
+
+        // Check if the 24h window is closed — if so, SEND the template to reopen
+        const { data: lastInbound } = await supabase
+          .from('messages')
+          .select('timestamp, created_at')
+          .eq('conversation_id', conversationId)
+          .eq('direction', 'inbound')
+          .order('timestamp', { ascending: false, nullsFirst: false })
+          .order('created_at', { ascending: false })
+          .limit(1)
+
+        const lastInboundAt = lastInbound?.[0]?.timestamp ?? lastInbound?.[0]?.created_at ?? null
+        const windowOpen = !!lastInboundAt && Date.now() - new Date(lastInboundAt).getTime() < 24 * 60 * 60 * 1000
+
+        if (!windowOpen) {
+          // Window closed — send the re-engagement template
+          const contactName = name || phone
+          const result = await sendOutreachTemplate(phone, contactName)
+          if (!result.ok) {
+            return NextResponse.json({ error: `Template send failed: ${result.error ?? 'unknown error'}` }, { status: 502 })
+          }
+          const nowIso = new Date().toISOString()
+          const previewText = renderOutreachPreview(contactName)
+          await supabase.from('messages').insert({
+            workspace_id: WORKSPACE_ID,
+            conversation_id: conversationId,
+            wa_message_id: result.waMessageId || `reengage_${Date.now()}`,
+            direction: 'outbound',
+            sender_type: 'agent',
+            sender_id: user.id,
+            message_type: 'template',
+            content: previewText,
+            status: 'sent',
+            is_ai_generated: false,
+            timestamp: nowIso,
+          })
+          await supabase
+            .from('conversations')
+            .update({ last_message_at: nowIso, last_message_preview: previewText.slice(0, 100), updated_at: nowIso })
+            .eq('id', conversationId)
+          return NextResponse.json({ ok: true, conversationId, existed: true, templateSent: true })
+        }
+
+        // Window is still open — just navigate to the chat
+        return NextResponse.json({ ok: true, conversationId, existed: true })
       }
 
       // Contact exists but no conversation — create one (no template send)

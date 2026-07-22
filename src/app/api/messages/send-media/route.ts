@@ -95,6 +95,7 @@ export async function POST(req: NextRequest) {
             : "This contact hasn't messaged you yet. WhatsApp won't deliver attachments until they reply — use New chat to send the approved template first.",
           code: 'WINDOW_CLOSED',
           windowClosed: true,
+          canReengage: true,
         },
         { status: 409 }
       )

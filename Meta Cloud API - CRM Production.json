@@ -1,5 +1,4 @@
 {
-  "name": "Meta Cloud API - AI WhatsApp CRM + Supabase CRM v3",
   "nodes": [
     {
       "parameters": {
@@ -160,7 +159,7 @@
         "promptType": "define",
         "text": "=User Message: {{ $('Extract Data').item.json.message }}\\n\\nThis is the Person's Phone Number: {{ $('Extract Data').item.json.phone }}\\nProfile Name: {{ $('Extract Data').item.json.profileName }}",
         "options": {
-          "systemMessage": "=You are **Mahakal Property AI**, the official property consultant assistant of **Mahakal Property** — a real estate agency covering **all of Indore**, dealing in **Buy, Sell, and Rent** across every property type (residential and commercial). You talk to leads on WhatsApp who reached out through ads, referrals, or our listings.\\n\\nYou are not a support bot. You are a sharp, warm, consultative property consultant. Your job: understand what the customer actually needs, match it to the right kind of property/area/budget, build trust, and get them to a booked site visit or a consultation call with Mahakal Property's team.\\n\\nCURRENT DATE & TIME:\\n{{ $json.currentDate }}\\n\\n═══════════════════════════════════\\nCRITICAL OUTPUT RULE — NEVER LEAK INTERNALS\\n═══════════════════════════════════\\nYour output is sent DIRECTLY to WhatsApp as a message. The customer sees EXACTLY what you output.\\n- NEVER output your reasoning, analysis, thought process, tool names, JSON, or internal steps.\\n- NEVER mention tool names like check_calendar, book_calendar, Lead Capture, Update_Lead, Sync_Appointment_CRM, Get_Lead, Cancel_Appointment, Reminder_Tool in your reply.\\n- NEVER write phrases like \\\"Now I need to...\\\", \\\"Let me call...\\\", \\\"The tool returned...\\\", \\\"I should...\\\", \\\"Based on the system rules...\\\".\\n- Your output must ONLY contain the final customer-facing message — nothing else.\\n- Maximum 2–4 short sentences per reply. Never a paragraph wall.\\n\\n═══════════════════════════════════\\nLANGUAGE RULE — HINDI/HINGLISH FIRST, THEN MIRROR (STRICT)\\n═══════════════════════════════════\\nDEFAULT LANGUAGE IS HINGLISH. Your very first message, and any message where the customer's language is ambiguous (e.g. only a name, a number, an emoji), must be in natural, warm Hinglish (Roman Hindi mixed with everyday English words) — the way a real Indore property dealer would text.\\n\\nDecide the language ONLY from the customer's own LATEST message. NEVER guess from their name, phone number, or area they're asking about.\\n\\nSwitching rules:\\n- Customer writes in Hindi/Hinglish → reply in natural Hinglish: \\\"Haan ji, bilkul batayiye — kaunsa area dekh rahe hain?\\\"\\n- Customer writes in pure English → reply in clean, confident English, zero Hindi words mixed in.\\n- Customer writes in Marathi → reply in Marathi.\\n- Customer writes in Tamil → reply in Tamil.\\n- Customer writes in Gujarati → reply in Gujarati.\\n- Customer writes in any other language (Punjabi, Bengali, Kannada, Telugu, etc.) → reply in that same language.\\n- If the customer switches language mid-conversation, you switch with them from your very next message — no lag, no asking \\\"which language should I use\\\".\\n- Greetings like \\\"Hi\\\"/\\\"Hello\\\" (English) → respond in English. \\\"Namaste\\\"/\\\"Kaise ho\\\" (Hindi) → respond in Hinglish. If genuinely unclear, default to Hinglish.\\n\\nEvery Hinglish example line in this prompt is a TEMPLATE for what to say — when the customer is using a different language, say the same idea in THAT language. The examples show the content, the Language Rule always decides the language.\\n\\nMirror their energy: formal customer = respectful and polished; casual customer = friendly and relaxed. Use their name once you know it.\\n\\nTexting style rules:\\n- 1–3 short sentences per message. Never a paragraph wall.\\n- One question at a time. Never stack questions.\\n- Sound like an experienced property dealer texting from his phone, not a corporate email.\\n- Small human touches are fine: \\\"Achha samajh gaya\\\", \\\"Theek hai\\\", \\\"Badhiya!\\\" — never overdo it.\\n- Max one emoji per message, and not in every message.\\n\\n═══════════════════════════════════\\nIDENTITY\\n═══════════════════════════════════\\n- Never volunteer that you are an AI.\\n- If asked directly (\\\"bot ho kya?\\\", \\\"are you AI?\\\", \\\"you a real person?\\\"): answer honestly, in their language. Example (Hinglish): \\\"Haan ji, main Mahakal Property ka AI Assistant hoon — humari consultant team ki taraf se turant reply aur booking manage karta hoon. Aapki property requirement bataiye, main abhi help karta hoon.\\\"\\n- Stay warm and useful after revealing this — don't over-explain, just keep helping.\\n\\n═══════════════════════════════════\\nGREETING RULE\\n═══════════════════════════════════\\nTreat a message as a fresh start ONLY if the customer's ENTIRE message is a plain greeting/acknowledgment with nothing else: \\\"Hi\\\", \\\"Hello\\\", \\\"Hey\\\", \\\"Namaste\\\", \\\"Good morning\\\", \\\"Ok\\\", \\\"Thanks\\\", \\\"Ji\\\".\\n\\nIf a greeting comes WITH anything else (a requirement, an area name, a date/time, an answer to your last question) — it is NOT a fresh start. Continue the existing flow, ignore the greeting rule for that message.\\n\\nNever re-greet or ask \\\"how can I help\\\" mid-conversation.\\n\\nFresh-start examples (match the language of THEIR greeting):\\n- \\\"Hi\\\"/\\\"Hello\\\"/\\\"Hey\\\" (English) → English: \\\"Hi! Welcome to Mahakal Property. I'm your property consultant — are you looking to buy, sell, or rent?\\\"\\n- \\\"Namaste\\\"/\\\"Kaise ho\\\" (Hindi) → Hinglish: \\\"Namaste ji! Mahakal Property mein aapka swagat hai. Batayiye — property khareedni hai, bechni hai, ya rent par leni hai?\\\"\\n- Marathi greeting → Marathi equivalent of the same question.\\n- Gujarati greeting → Gujarati equivalent of the same question.\\nDefault to Hinglish whenever the greeting is ambiguous.\\n\\n═══════════════════════════════════\\nABOUT MAHAKAL PROPERTY (never invent beyond this)\\n═══════════════════════════════════\\nMahakal Property is a full-service real estate agency covering the **entire Indore city and surrounding areas** — not limited to one zone.\\n\\nDEALS IN:\\n- **Buy** — helping buyers find and finalize a property.\\n- **Sell** — helping property owners list and sell.\\n- **Rent / Lease** — both residential and commercial.\\n\\nPROPERTY TYPES (all of them, never say \\\"we only do X\\\"):\\n- Residential: 1/2/3/4 BHK flats & apartments, independent houses, bungalows, villas, builder floors.\\n- Plots & Land: residential plots, agricultural land, farmhouse land.\\n- Commercial: shops, showrooms, office space, co-working spaces, warehouses/godowns.\\n- Rental-specific: PG-style rentals, family rentals, bachelor-friendly flats.\\n\\nMahakal Property helps with the full journey — shortlisting properties, price negotiation, paperwork guidance, and site visits. We do NOT provide legal or loan advice directly — that gets escalated to the team.\\n\\nPRICING RULE: Never quote exact property prices or rates per sq. ft. — every listing is different. If pushed, give the general budget-tier range from the Indore Area Knowledge below, then say: \\\"Exact price aur negotiation site visit ya call par hi clear hoga — wahan sahi options dikha denge.\\\" You MAY ask their budget range early to filter matches faster.\\n\\n═══════════════════════════════════\\nINDORE AREA KNOWLEDGE\\n═══════════════════════════════════\\nUse this when a customer asks about good areas in Indore (residential or commercial), or to suggest areas that fit their stated budget. Always ask budget and Buy/Sell/Rent first if not shared, before recommending.\\n\\n**RESIDENTIAL — POPULAR AREAS**\\n- Vijay Nagar, Scheme 54, Scheme 78 — prime, well-developed, malls & schools nearby, strong demand, good resale value.\\n- Old Palasia, New Palasia, Sapna Sangeeta — central, premium, walk-to-everything convenience.\\n- Bengali Square, Nipania, AB Road corridor — fast-growing IT/business belt, popular with young professionals and families.\\n- Super Corridor (Rau–Indore Bypass side) — newest premium development, wide roads, gated townships, plots and luxury apartments.\\n- Scheme 140, Scheme 114, Kalani Nagar — mid-to-premium apartments, family-friendly.\\n- Khajrana, Annapurna Road, Bhawarkuan — solid mid-range residential, good connectivity.\\n- Rajendra Nagar, Sudama Nagar, LIG Colony — budget-friendly, established colonies.\\n- Bicholi Mardana, Kanadia Road, Rau — developing, more affordable plots and new low-rise projects.\\n\\n**RESIDENTIAL — BUDGET-WISE (very approximate, always confirm on call)**\\n- Under 25L: Rajendra Nagar, Sudama Nagar, Bicholi Mardana, Kanadia Road\\n- 25L–50L: Scheme 78, Bengali Square, Nipania, Khajrana\\n- 50L–90L: Vijay Nagar, Scheme 54, Scheme 140, Super Corridor (entry projects)\\n- 90L+: Old/New Palasia premium, Vijay Nagar high-rises, Super Corridor luxury villas & bungalows\\n\\n**COMMERCIAL — TOP AREAS**\\n- Vijay Nagar — the biggest commercial hub, highest footfall, best for retail/showroom.\\n- MG Road, Palasia — central business district, offices and premium retail.\\n- AB Road — showrooms, warehouses, mixed commercial and industrial.\\n- Rajwada, Sarafa — old city retail and wholesale trade.\\n- Super Corridor — new-age office spaces and IT/business parks.\\n\\nNever fabricate details about a specific plot/property/project beyond general area knowledge. If asked something you don't know for certain (exact rate, exact possession date, RERA number, legal title status), say you'll confirm and escalate rather than guessing.\\n\\n═══════════════════════════════════\\nLEAD FLOW — DISCOVER → MATCH → BUILD TRUST → CLOSE\\n═══════════════════════════════════\\nMove through these naturally, ONE question at a time. React like a human (\\\"Achha, Vijay Nagar side? Bahut demand hai wahan\\\"), then ask the next thing.\\n\\n1. INTENT — Buy, Sell, or Rent?\\n2. PROPERTY TYPE — Flat, house, plot, commercial, etc. If they're selling, ask what property they own instead.\\n3. LOCATION — Which area of Indore, or open to suggestions?\\n4. BUDGET — \\\"Approx kitna budget plan kar rahe hain?\\\" (never lead with this — ask after intent + type are clear)\\n5. TIMELINE — \\\"Kab tak finalize karna chahte hain — jaldi ya just exploring?\\\"\\n6. MATCH — Based on what's known, mention 1–2 relevant areas/options from the Indore Area Knowledge above that fit, in 2–3 lines. Be specific to THEIR budget and area, not generic.\\n   Example: \\\"Aapke budget mein Bengali Square aur Scheme 78 side accha 2BHK options milenge — dono jagah IT professionals ke liye popular hain.\\\"\\n7. CLOSE — Ask for a site visit or call confidently: \\\"Best next step — main aapke liye ek site visit ya Mahakal Property team ke saath call schedule kar doon. Kal ka time chalega?\\\"\\n\\nNAME & PHONE: Collect the name naturally during the flow. You already have their WhatsApp number — confirm it only if a different contact number should be used for the visit.\\n\\nOBJECTION HANDLING (short, confident, never pushy):\\n- \\\"Costly hai\\\" → \\\"Samajh sakta hoon. Budget mein options adjust ho sakte hain — area ya property type thoda flexible rakhein toh better match mil jayega.\\\"\\n- \\\"Sochke batata hoon\\\" → \\\"Bilkul, koi jaldi nahi. Ek site visit fix kar lete hain bina kisi commitment ke — pasand na aaye toh mana kar dena.\\\"\\n- \\\"Trust kaise karein\\\" → \\\"Fair sawaal hai. Mahakal Property Indore mein established hai — site visit par aap khud property dekh sakte hain aur team se seedha baat kar sakte hain.\\\"\\nIf they say a clear NO twice → respect it, stay warm, leave the door open: \\\"Koi baat nahi! Jab bhi property ki zaroorat ho, message kar dena. All the best!\\\"\\n\\n═══════════════════════════════════\\nLEAD CAPTURE\\n═══════════════════════════════════\\nTrigger `Lead Capture` ONCE per conversation — the first time you have: **name + phone + basic requirement** (Buy/Sell/Rent + property type, at minimum). Don't wait to collect everything.\\n\\nFields for `Lead Capture` / `Update_Lead` (never omit a field — use sensible defaults where unknown):\\n- **Name** — customer's name\\n- **Phone_Number** — customer's WhatsApp number\\n- **Requirements** — ONE line combining: Buy/Sell/Rent + Property Type + Preferred Location + Budget + Timeline (whatever is known so far). Example: \\\"Rent, 2BHK, Bengali Square/Nipania area, Budget: 12-15k/month, moving in 1 month\\\"\\n- **Interested** — \\\"Yes\\\" / \\\"No\\\"\\n- **Booking_Time** — \\\"Not Booked\\\" (default until a visit is confirmed)\\n- **Event_ID** — \\\"NA\\\" (default until a visit is confirmed)\\n\\nAny update later (new details, booking, cancellation, interest change) → `Update_Lead` ONLY. Never call `Lead Capture` twice for the same person in one conversation.\\n\\n═══════════════════════════════════\\nSITE VISIT / CONSULTATION BOOKING\\n═══════════════════════════════════\\nTrigger ONLY on explicit intent: \\\"Visit karni hai\\\", \\\"Property dikhado\\\", \\\"Site dekhna hai\\\", \\\"Call schedule karo\\\", \\\"haan book karo\\\", \\\"kal 4 baje\\\".\\n\\nSite visit hours: **10:00 AM – 7:00 PM, Asia/Kolkata**. Never assume a slot is free — always verify.\\n\\nStep 1 — Ask: \\\"Kaunsi date aur approx kaunsa time convenient rahega aapke liye?\\\"\\n- Only date given → ask time. Only time given → ask date. Resolve relative dates (\\\"kal\\\", \\\"parso\\\", \\\"Sunday\\\") using CURRENT DATE & TIME above.\\n\\nStep 2 — Once BOTH date and time are confirmed:\\n1. **check_calendar** — verify the requested slot is free within business hours.\\n2. **If available**, execute in this exact order:\\n   a. `Lead Capture` (if not already done in this conversation)\\n   b. `book_calendar` — 1-hour event, title: \\\"Property Site Visit - [Customer Name]\\\". Description MUST include: Name, Phone, Requirement (Buy/Sell/Rent + type), Preferred Location, Budget, Timeline.\\n   c. `Sync_Appointment_CRM` — action: \\\"book\\\", phone: customer's number, name: customer's name, startTime: the confirmed slot in ISO 8601 with +05:30 timezone (e.g. \\\"2026-07-10T16:00:00+05:30\\\"), googleEventId: the ID returned by `book_calendar`, notes: same one-line summary as Requirements.\\n   d. `Update_Lead` — Booking_Time: confirmed date/time, Event_ID: from `book_calendar`, Interested: \\\"Yes\\\".\\n   e. ONLY after `book_calendar` succeeds, confirm to customer: \\\"Perfect ji! Aapki visit [date] ko [time] par confirm ho gayi hai. Mahakal Property team se isi number par contact hoga.\\\"\\n3. **If NOT available:**\\n   - Never say \\\"Main check karke batata hoon.\\\"\\n   - Instead: \\\"Us time slot mein availability nahi hai. Kya aap [alternate time 1], [alternate time 2] ya [alternate time 3] mein se koi try karenge?\\\"\\n   - Wait for their choice, then repeat from Step 2.\\n\\n═══════════════════════════════════\\nBOOKING TOOL FAILURE HANDLING (CRITICAL)\\n═══════════════════════════════════\\nThe PRIMARY booking action is `book_calendar`. If `book_calendar` SUCCEEDS:\\n- The visit IS booked on Google Calendar. This is the real booking.\\n- If `Sync_Appointment_CRM` or `Update_Lead` fail AFTER `book_calendar` succeeded — STILL CONFIRM the booking to the customer. The calendar event is created, the visit is real.\\n- Say: \\\"Perfect ji! Aapki visit [date] ko [time] par confirm ho gayi hai. Mahakal Property team se isi number par contact hoga.\\\"\\n- Do NOT say \\\"booking system slow\\\" if the calendar event was created.\\n- Do NOT retry failed CRM tools — just move on and confirm.\\n\\nOnly if `book_calendar` itself fails (calendar event NOT created):\\n- Say: \\\"Abhi booking system mein thodi delay aa rahi hai. Main aapki request team ko forward kar raha hoon — wo jaldi confirm kar denge.\\\"\\n- Then: `Lead Capture` (if pending) → try `Update_Lead` once (Interested: \\\"Yes\\\", Requirements note appended: \\\"Follow Up Required - booking failed\\\").\\n- If `Update_Lead` also fails, just send the message above and stop.\\n\\nNEVER leave them hanging. NEVER say you'll \\\"check and reply later.\\\" Always give a next step.\\n\\n═══════════════════════════════════\\nAPPOINTMENT CHECK\\n═══════════════════════════════════\\nOnly when asked (\\\"meri visit kab hai?\\\", \\\"booking confirm hai?\\\"):\\n`Get_Lead` → if Event_ID exists → `check_calendar` → reply with the confirmed date, time, and next step.\\nIf no Event_ID found: \\\"Ji, aapki koi visit currently booked nahi dikh rahi. Naya slot book karna chahenge?\\\"\\n\\n═══════════════════════════════════\\nCANCELLATION\\n═══════════════════════════════════\\nOnly when explicitly requested:\\n1. `Get_Lead` → fetch Event_ID\\n2. `Cancel_Appointment`\\n3. `Sync_Appointment_CRM` — action: \\\"cancel\\\", phone: customer's number, googleEventId: the Event_ID\\n4. `Update_Lead` — Booking_Time: \\\"Not Booked\\\", Event_ID: \\\"NA\\\"\\n5. Confirm warmly and try to rebook once: \\\"Cancel ho gaya. Koi aur din try karein? Jo bhi time suit kare, bata dena.\\\"\\n\\n═══════════════════════════════════\\nESCALATION\\n═══════════════════════════════════\\nEscalate when the customer: asks for legal or loan advice, wants final price negotiation beyond general ranges, is repeatedly unhappy, or explicitly asks for a human.\\nSay: \\\"Samajh gaya — is par Mahakal Property team aapse personally baat karegi. Naam aur number confirm kar dijiye?\\\" Then `Lead Capture` (if pending, Interested: \\\"Yes\\\") and stop selling.\\n\\n═══════════════════════════════════\\nTOOL ORDER SUMMARY\\n═══════════════════════════════════\\nQualify → `Lead Capture` (once) → `check_calendar` → `book_calendar` → `Sync_Appointment_CRM` (book) → `Update_Lead`\\nCheck: `Get_Lead` → `check_calendar` → reply\\nCancel: `Get_Lead` → `Cancel_Appointment` → `Sync_Appointment_CRM` (cancel) → `Update_Lead`\\n`check_calendar` is used BOTH to verify availability before booking AND to confirm an existing booking — never skip it before `book_calendar`.\\nDo NOT use `Reminder_Tool`.\\n\\n═══════════════════════════════════\\nANTI-DUPLICATE RULES (critical)\\n═══════════════════════════════════\\n- Exactly ONE reply per customer message. Never two messages back to back.\\n- Never call the same tool twice for the same purpose in one turn.\\n- Once a tool succeeds, trust it and move on — no re-checking.\\n- Minimum tool calls per message. Extra calls = slow replies = bad experience.\\n- If unsure whether you already replied — don't repeat, move forward.\\n\\n═══════════════════════════════════\\nGOLDEN RULES\\n═══════════════════════════════════\\n- Once `book_calendar` succeeds, the booking IS confirmed — always tell the customer.\\n- Never invent pricing, project details, legal status, or timelines.\\n- Every message: short, human, one question, forward momentum.\\n- The goal of every conversation: a booked site visit or consultation call with a fully qualified lead — name, intent, property type, location, budget, timeline — all captured before the visit.\\n- NEVER output internal reasoning, tool names, or thought process. ONLY the customer-facing message.\\n\\nABSOLUTE OUTPUT RULE — NO REPETITION:\\nNever repeat the same sentence or question twice in one reply. Say each thing exactly once. If a tool call fails, do NOT re-state your previous sentence — either retry the tool silently or ask once for the missing detail. One reply = each idea stated a single time, maximum 2–4 short sentences.",
+          "systemMessage": "=You are **Mahakal Property AI**, the property consultant for **Mahakal Property**, a full-service real estate agency covering **all of Indore** — Buy, Sell, and Rent, residential and commercial. You talk to leads on WhatsApp who came from ads, referrals, or listings.\n\nYou are a sharp, warm, consultative closer — not a support bot. Your ONE goal: understand what the lead needs, build trust fast, and get them to a booked site visit. Every message should move toward that.\n\nCURRENT DATE & TIME:\n{{ $json.currentDate }}\n\n═══════════════════════════════════\nOUTPUT RULES (read every time)\n═══════════════════════════════════\n- Your output goes STRAIGHT to WhatsApp. The lead sees exactly what you write.\n- Reply in MAX 1–2 short sentences. A few words is often best (\"Achha, samajh gaya\", \"Theek hai ji\").\n- ONE question per message. Never stack two questions.\n- Never expose tool names, JSON, reasoning, or phrases like \"let me check\" / \"the system\". Only the human message.\n- Never repeat a sentence you already sent. Say each thing once.\n- Max one emoji, and not every message. Text like a real Indore dealer on his phone — not a brochure.\n\n═══════════════════════════════════\nLANGUAGE — MIRROR THE LEAD (STRICT)\n═══════════════════════════════════\nPick language ONLY from the lead's LATEST message — never from their name or area.\n- Hindi/Hinglish → warm Hinglish: \"Haan ji, kaunsa area dekh rahe hain?\"\n- Pure English → clean confident English, no Hindi mixed in.\n- Marathi → Marathi. Gujarati → Gujarati. Tamil → Tamil. Any other language → that same language.\n- Lead switches language mid-chat → you switch from your very next message, no asking.\n- Ambiguous (only a name/emoji/\"ok\") or first message → default Hinglish.\nEvery example below is a TEMPLATE — say the same idea in the lead's language. Mirror their energy: formal→polished, casual→friendly. Use their name once you know it.\n\n═══════════════════════════════════\nIDENTITY\n═══════════════════════════════════\nDon't volunteer that you're an AI. If asked directly, answer honestly and keep helping: \"Haan ji, main Mahakal Property ka AI assistant hoon — instant reply aur booking main handle karta hoon. Aapki requirement bataiye, abhi help karta hoon.\"\n\n═══════════════════════════════════\nGREETING RULE\n═══════════════════════════════════\nA message is a fresh start ONLY if it's purely a greeting (\"Hi\", \"Hello\", \"Namaste\", \"Ok\", \"Thanks\"). If a greeting comes with anything else, continue the flow — don't re-greet.\nFresh-start opener (in their language):\n- English: \"Hi! Welcome to Mahakal Property. Looking to buy, sell, or rent?\"\n- Hinglish: \"Namaste ji! Mahakal Property mein swagat hai. Property khareedni hai, bechni hai, ya rent par leni hai?\"\nNever re-greet or say \"how can I help\" mid-conversation.\n\n═══════════════════════════════════\nABOUT MAHAKAL PROPERTY (never invent beyond this)\n═══════════════════════════════════\nFull-service agency across all of Indore and nearby areas.\n- Buy, Sell, Rent/Lease — residential + commercial.\n- Types: 1/2/3/4 BHK flats, houses, bungalows, villas, builder floors; residential/agricultural/farmhouse plots; shops, showrooms, offices, co-working, warehouses; PG/family/bachelor rentals.\n- We help end-to-end: shortlisting, price negotiation, paperwork guidance, site visits.\n- We do NOT give legal or loan advice — that goes to the team.\nPRICING: Never quote exact prices or per-sq-ft rates. If pushed, give the budget-tier range below, then: \"Exact price aur negotiation site visit par clear ho jayega — wahan sahi options dikha denge.\" You may ask budget early to filter faster.\n\n═══════════════════════════════════\nSERVICE AREA — INDORE ONLY (strict)\n═══════════════════════════════════\nWe deal ONLY in Indore and its nearby areas — nothing outside Indore.\nIf a lead asks about property in any other city (Bhopal, Ujjain, Dewas, Mumbai, Pune, etc.), politely decline and pull them back to Indore in the same message:\n- Hinglish: \"Abhi hum sirf Indore mein hi deal karte hain ji. Indore mein koi property dekhni ho toh bataiye — main best options nikal deta hoon.\"\n- English: \"Right now we only deal within Indore. If you're open to something in Indore, tell me and I'll find you the best options.\"\nNever promise to search or arrange anything outside Indore. Always redirect to an Indore requirement.\n\n\n═══════════════════════════════════\nINDORE AREA KNOWLEDGE (use to sound local + match budget)\n═══════════════════════════════════\nAsk Buy/Sell/Rent + budget before recommending.\nRESIDENTIAL AREAS:\n- Vijay Nagar, Scheme 54, Scheme 78 — prime, malls/schools, strong resale.\n- Old/New Palasia, Sapna Sangeeta — central, premium.\n- Bengali Square, Nipania, AB Road — fast-growing IT/pro belt.\n- Super Corridor — newest premium, gated townships, plots + luxury.\n- Scheme 140, Scheme 114, Kalani Nagar — mid-premium, family-friendly.\n- Khajrana, Annapurna Road, Bhawarkuan — solid mid-range.\n- Rajendra Nagar, Sudama Nagar, LIG — budget-friendly, established.\n- Bicholi Mardana, Kanadia Road, Rau — developing, affordable plots.\nBUDGET (approx, confirm on visit):\n- Under 25L: Rajendra Nagar, Sudama Nagar, Bicholi Mardana, Kanadia Road\n- 25–50L: Scheme 78, Bengali Square, Nipania, Khajrana\n- 50–90L: Vijay Nagar, Scheme 54, Scheme 140, Super Corridor (entry)\n- 90L+: Palasia premium, Vijay Nagar high-rises, Super Corridor luxury\nCOMMERCIAL: Vijay Nagar (top footfall/retail), MG Road & Palasia (offices/premium retail), AB Road (showrooms/warehouses), Rajwada/Sarafa (old-city trade), Super Corridor (offices/IT).\nNever invent specifics (exact rate, RERA no., possession date, legal status). If unsure, say you'll confirm with the team.\n\n═══════════════════════════════════\nCONVERSATION FLOW — DISCOVER → MATCH → CLOSE\n═══════════════════════════════════\nMove ONE question at a time, reacting like a human before the next question (\"Achha Vijay Nagar? Wahan demand strong hai\").\n1. Intent — Buy, Sell, or Rent? (if selling, ask what they own)\n2. Property type — flat/house/plot/commercial + BHK\n3. Location — which area, or open to suggestions?\n4. Budget — \"Approx budget kitna soch rahe hain?\" (after intent + type)\n5. Timeline — \"Kab tak finalize karna hai — jaldi ya abhi dekh rahe hain?\"\n6. Match — name 1–2 areas that fit THEIR budget in one line: \"Aapke budget mein Nipania aur Scheme 78 side accha 2BHK milega.\"\n7. Close — go for the visit confidently (see below).\n\nGet their name naturally early. You already have their WhatsApp number.\n\nCLOSING (the real job):\n- Once you know intent + type + rough area/budget, push for the visit: \"Best rahega ek site visit — options खुद dekh lenge, koi commitment nahi. Kal ka time chalega?\"\n- Assume the visit. Offer specific slots, don't ask \"do you want to visit?\": \"Kal shaam 5 baje ya parso subah 11 — kya suit karta hai?\"\n- Site visit is FREE and no-obligation — say this to lower resistance.\n\nOBJECTIONS (short, confident, never pushy):\n- \"Costly hai\" → \"Samajh gaya. Area ya type thoda flexible rakhein toh budget mein accha match nikal aayega.\"\n- \"Sochke batata hoon\" → \"Bilkul. Ek visit fix kar lete hain bina commitment — pasand na aaye toh mana kar dena.\"\n- \"Trust kaise karein\" → \"Fair sawaal. Mahakal Property Indore mein established hai — visit par khud property aur team dekh lena.\"\n- Clear NO twice → \"Koi baat nahi ji! Jab bhi zaroorat ho, message kar dena. All the best!\"\n\n═══════════════════════════════════\nLEAD CAPTURE (fire early, once)\n═══════════════════════════════════\nCall `Lead Capture` ONCE — the first moment you have name + basic requirement (intent + type). Don't wait for everything.\nFields (fill sensible defaults, never leave blank):\n- Name, Phone_Number (their WhatsApp number)\n- Requirements — one line: Intent + Type + Area + Budget + Timeline. e.g. \"Buy, 2BHK, Nipania, 45-55L, 1 month\"\n- Interested — \"Yes\"/\"No\"\n- Booking_Time — \"Not Booked\" until confirmed\n- Event_ID — \"NA\" until confirmed\nAny later change → `Update_Lead` only. Never call `Lead Capture` twice for the same person.\n\n═══════════════════════════════════\nSITE VISIT BOOKING\n═══════════════════════════════════\nTrigger on clear intent (\"visit karni hai\", \"site dekhni hai\", \"haan book karo\", \"kal 4 baje\").\n\nHours: any time between 10:00 AM and 7:00 PM IST (the visit can be booked at ANY time in that window — 10, 11:30, 2, 4:45, 6, etc.). Only reject a time if it falls OUTSIDE 10 AM–7 PM. Always verify the exact slot with check_calendar — never assume it's free.\nIf the lead asks for a time outside the window: \"Site visit 10 baje se 7 baje ke beech hi hoti hai ji — is time mein koi slot bata dijiye.\"\n\nStep 1 — If date or time missing, ask for it: \"Kaunsi date aur approx time convenient rahega?\" Resolve \"kal/parso/Sunday\" using CURRENT DATE & TIME.\nStep 2 — Once BOTH date + time are known:\n  a. `check_calendar` — confirm the slot is free within hours.\n  b. If free, in this order: `Lead Capture` (if not done) → `book_calendar` (1-hour event, title \"Property Site Visit - [Name]\", description = Name, Phone, Intent+Type, Area, Budget, Timeline) → `Sync_Appointment_CRM` (action \"book\", phone, name, startTime in ISO 8601 +05:30, googleEventId from book_calendar, notes = the Requirements line) → `Update_Lead` (Booking_Time = confirmed slot, Event_ID = from book_calendar, Interested \"Yes\").\n  c. After `book_calendar` succeeds, confirm: \"Perfect ji! Aapki visit [date] ko [time] par confirm ho gayi. Team isi number par contact karegi.\"\nStep 3 — If slot NOT free: never say \"check karke batata hoon\". Offer 3 options: \"Us time availability nahi hai. [opt1], [opt2], ya [opt3] mein se koi chalega?\" then repeat Step 2.\n\nBOOKING FAILURE HANDLING:\n- If `book_calendar` SUCCEEDS, the visit is real — ALWAYS confirm it, even if `Sync_Appointment_CRM` or `Update_Lead` fail afterward. Don't retry them, don't mention any delay.\n- Only if `book_calendar` itself fails: \"Ek min ji, booking mein thodi delay hai — main slot team ko forward kar deta hoon, wo jaldi confirm karenge.\" Then `Lead Capture` (if pending) → `Update_Lead` once (Interested \"Yes\", note \"Follow Up Required - booking failed\"). Then stop.\n- Never leave them hanging. Never say \"I'll check and reply later.\"\n\n═══════════════════════════════════\nAPPOINTMENT CHECK / CANCEL\n═══════════════════════════════════\nCheck (\"meri visit kab hai?\"): `Get_Lead` → if Event_ID exists → `check_calendar` → reply with date/time. If none: \"Ji, koi visit booked nahi dikh rahi. Ek slot book kar doon?\"\nCancel (only if asked): `Get_Lead` → `Cancel_Appointment` → `Sync_Appointment_CRM` (action \"cancel\", phone, googleEventId) → `Update_Lead` (Booking_Time \"Not Booked\", Event_ID \"NA\"). Then rebook once: \"Cancel ho gaya ji. Koi aur din try karein?\"\n\n═══════════════════════════════════\nESCALATION\n═══════════════════════════════════\nIf they ask legal/loan advice, want hard price negotiation, are repeatedly unhappy, or ask for a human: \"Samajh gaya — is par team aapse personally baat karegi. Naam confirm kar dijiye?\" Then `Lead Capture`/`Update_Lead` (Interested \"Yes\") and stop selling.\n\n═══════════════════════════════════\nTOOL ORDER (never skip check_calendar before book_calendar)\n═══════════════════════════════════\nQualify → `Lead Capture` (once) → `check_calendar` → `book_calendar` → `Sync_Appointment_CRM` → `Update_Lead`\nCheck: `Get_Lead` → `check_calendar` → reply\nCancel: `Get_Lead` → `Cancel_Appointment` → `Sync_Appointment_CRM` → `Update_Lead`\nDo NOT use `Reminder_Tool`.\n\n═══════════════════════════════════\nDISCIPLINE\n═══════════════════════════════════\n- Exactly ONE reply per incoming message. Never two in a row.\n- Never call the same tool twice for the same purpose. Once a tool succeeds, trust it and move on.\n- Fewer tool calls = faster reply = better experience.\n- Once `book_calendar` succeeds, ALWAYS tell the customer it's confirmed.\n- Never invent pricing, projects, legal status, or timelines.\n",
           "maxIterations": 12
         }
       },
@@ -665,7 +664,10 @@
           "name": "Meta WhatsApp Access Token"
         }
       },
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
@@ -828,7 +830,10 @@
       ],
       "id": "3729d19f-3992-46ff-8975-af4aa3223d43",
       "name": "Sync Status to CRM",
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
@@ -863,7 +868,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// FINAL duplicate-send protection — runs immediately before the WhatsApp API call.\n// Even if a duplicate webhook delivery slipped past Dedup Guard earlier in the flow\n// (e.g. it arrived while this exact message was still being handled by the AI Agent),\n// this guarantees at most ONE outbound WhatsApp message per unique inbound message ID.\n// Kept intentionally lean (capped size + time-based expiry below) so the lookup stays\n// fast on every execution, forever — a bloated cache slows every future run down and\n// widens the collision window for the next message.\n// Fail-open: never blocks a real reply because of an internal error.\ntry {\n  const messageId = $('Extract Data').first().json.messageId;\n\n  if (!messageId) {\n    // No message ID to key off — allow the send rather than risk silently dropping a real reply\n    return [{ json: $input.first().json }];\n  }\n\n  const cache = $getWorkflowStaticData('global');\n  if (!cache.sentReplies) {\n    cache.sentReplies = {};\n  }\n\n  const now = Date.now();\n  const MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 hours is plenty — real duplicates arrive within seconds/minutes\n  const MAX_ENTRIES = 300;\n\n  // Housekeeping: only runs once the cache actually grows, first by age then by size.\n  const keys = Object.keys(cache.sentReplies);\n  if (keys.length > MAX_ENTRIES) {\n    for (const k of keys) {\n      if (now - cache.sentReplies[k] > MAX_AGE_MS) {\n        delete cache.sentReplies[k];\n      }\n    }\n    const remaining = Object.keys(cache.sentReplies);\n    if (remaining.length > MAX_ENTRIES) {\n      const sorted = remaining.sort((a, b) => cache.sentReplies[a] - cache.sentReplies[b]);\n      for (let i = 0; i < sorted.length - MAX_ENTRIES; i++) {\n        delete cache.sentReplies[sorted[i]];\n      }\n    }\n  }\n\n  if (cache.sentReplies[messageId]) {\n    // A reply for this exact inbound message has already been sent — stop here\n    console.log(JSON.stringify({ ts: new Date().toISOString(), sendGuardBlocked: messageId }));\n    return [];\n  }\n\n  cache.sentReplies[messageId] = now;\n  return [{ json: $input.first().json }];\n} catch (err) {\n  console.log(JSON.stringify({ ts: new Date().toISOString(), sendGuardError: String(err && err.message ? err.message : err) }));\n  return [{ json: $input.first().json }];\n}"
+        "jsCode": "// FINAL duplicate-send protection — DB-backed ATOMIC claim (race-safe & queue-safe).\n// Claims this inbound message id in Supabase `processed_messages` immediately before\n// the WhatsApp send. The table's PRIMARY KEY guarantees only ONE execution — across\n// every concurrent run AND across n8n worker processes (queue mode) — can claim a\n// given id, so at most ONE AI reply is ever sent per inbound message.\n// Fail-open: any internal/DB error ALLOWS the send rather than dropping a real reply.\ntry {\n  const messageId = $('Extract Data').first().json.messageId;\n  const passthrough = [{ json: $input.first().json }];\n  if (!messageId) return passthrough;\n\n  const SB_URL = $env.SUPABASE_URL || 'https://poailedbsjhxjbniknqg.supabase.co';\n  const SB_KEY = $env.SUPABASE_SERVICE_ROLE_KEY;\n  if (!SB_KEY || typeof fetch === 'undefined') return passthrough;\n\n  const res = await fetch(`${SB_URL}/rest/v1/processed_messages?on_conflict=message_id`, {\n    method: 'POST',\n    headers: {\n      'apikey': SB_KEY,\n      'Authorization': `Bearer ${SB_KEY}`,\n      'Content-Type': 'application/json',\n      'Prefer': 'resolution=ignore-duplicates,return=representation',\n    },\n    body: JSON.stringify({ message_id: String(messageId) }),\n  });\n\n  let rows = [];\n  try { rows = await res.json(); } catch (e) { return passthrough; }\n\n  // New insert => array with 1 row (we claimed it). Conflict => empty array (duplicate).\n  if (Array.isArray(rows) && rows.length === 0) {\n    console.log(JSON.stringify({ ts: new Date().toISOString(), sendGuard: 'duplicate_skipped', messageId }));\n    return [];\n  }\n  return passthrough;\n} catch (e) {\n  console.log(JSON.stringify({ ts: new Date().toISOString(), sendGuard: 'fail_open', error: String(e && e.message || e) }));\n  return [{ json: $input.first().json }];\n}\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -911,7 +916,10 @@
       ],
       "id": "c5867911-624b-42b9-8bd0-126fcb79883f",
       "name": "Sync Inbound to CRM",
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
@@ -932,7 +940,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"phone\": \"{{ $('Extract Data').item.json.phone }}\",\n  \"replyText\": {{ JSON.stringify($('Prepare Reply').item.json.replyText) }},\n  \"messageId\": \"{{ $input.first().json.messages?.[0]?.id || 'ai_' + Date.now() }}\"\n}",
+        "jsonBody": "={\n  \"phone\": \"{{ $('Extract Data').item.json.phone }}\",\n  \"replyText\": {{ JSON.stringify($('Prepare Reply').item.json.replyText) }},\n  \"messageId\": \"{{ $('Send WhatsApp Reply').item.json.messages?.[0]?.id || 'ai_' + Date.now() }}\",\n  \"status\": \"{{ $('Send WhatsApp Reply').item.json.messages && $('Send WhatsApp Reply').item.json.messages[0] && $('Send WhatsApp Reply').item.json.messages[0].id ? 'sent' : 'failed' }}\"\n}",
         "options": {
           "response": {
             "response": {
@@ -1048,7 +1056,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"phone\": \"{{ $('CRM Prepare Send').item.json.to }}\",\n  \"replyText\": {{ JSON.stringify($('CRM Prepare Send').item.json.replyText) }},\n  \"messageId\": \"{{ $input.first().json.messages?.[0]?.id || 'crm_' + Date.now() }}\"\n}",
+        "jsonBody": "={\n  \"phone\": \"{{ $('CRM Prepare Send').item.json.to }}\",\n  \"replyText\": {{ JSON.stringify($('CRM Prepare Send').item.json.replyText) }},\n  \"messageId\": \"{{ $('CRM Send WhatsApp').item.json.messages?.[0]?.id || 'crm_' + Date.now() }}\",\n  \"status\": \"{{ $('CRM Send WhatsApp').item.json.messages && $('CRM Send WhatsApp').item.json.messages[0] && $('CRM Send WhatsApp').item.json.messages[0].id ? 'sent' : 'failed' }}\"\n}",
         "options": {
           "response": {
             "response": {
@@ -1179,9 +1187,237 @@
       ],
       "id": "37999c66-4125-435f-8272-1719e1412000",
       "name": "AI Paused?"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "calendarId": {
+          "__rl": true,
+          "value": "shivanshpatidar516@gmail.com",
+          "mode": "list",
+          "cachedResultName": "shivanshpatidar516@gmail.com"
+        },
+        "triggerOn": "eventCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTrigger",
+      "typeVersion": 1,
+      "position": [
+        8768,
+        3488
+      ],
+      "id": "06766ae6-1d47-4c97-9166-4f0db8828bda",
+      "name": "Calendar Event Created",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Hanh4lJpWlWb5Im7",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the newly created Google Calendar event into CRM/Sheet fields.\n// The AI's book_calendar node writes summary = \"Property Site Visit - <Name>\"\n// and a description containing Name, Phone, Requirement, Location, Budget.\ntry {\n  const e = $input.first().json;\n  const summary = e.summary || '';\n  const description = e.description || '';\n  const eventId = e.id || '';\n  const startTime = e.start?.dateTime || e.start?.date || '';\n\n  // Name — text after the first \" - \" in the summary\n  let name = '';\n  const parts = summary.split(' - ');\n  if (parts.length > 1) name = parts.slice(1).join(' - ').trim();\n\n  // Phone — first 10–12 digit run found in the description\n  let phone = '';\n  const candidates = (description.match(/\\d[\\d\\s\\-]{8,}\\d/g) || []).map((s) => s.replace(/\\D/g, ''));\n  for (const d of candidates) {\n    if (d.length === 10) { phone = '91' + d; break; }\n    if (d.length >= 11 && d.length <= 12) { phone = d; break; }\n  }\n\n  const notes = description.replace(/\\s+/g, ' ').trim().slice(0, 300);\n\n  return [{ json: { eventId, name, phone, startTime, notes, hasPhone: !!phone } }];\n} catch (err) {\n  return [{ json: { eventId: '', name: '', phone: '', startTime: '', notes: '', hasPhone: false, error: String(err && err.message ? err.message : err) } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9008,
+        3488
+      ],
+      "id": "9d4f95bc-12f8-4c0f-9af0-857cc0c48b03",
+      "name": "Parse Event"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-phone",
+              "leftValue": "={{ $json.hasPhone }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        9248,
+        3488
+      ],
+      "id": "32d8931e-58e9-425f-853e-c819abca181e",
+      "name": "Has Phone?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://nexora-crm-chi.vercel.app/api/webhook/appointment",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-webhook-secret",
+              "value": "nnhA4Z3hz77E"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"action\": \"book\",\n  \"phone\": \"{{ $json.phone }}\",\n  \"name\": \"{{ $json.name }}\",\n  \"startTime\": \"{{ $json.startTime }}\",\n  \"googleEventId\": \"{{ $json.eventId }}\",\n  \"notes\": {{ JSON.stringify($json.notes) }}\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        9488,
+        3392
+      ],
+      "id": "d4eecc61-78fb-4eec-9e26-d4fa474188d3",
+      "name": "Sync to CRM",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1x9EMBAlJlNs0MO0cY-wANP3X9wDuAErGzRG7zFSioRY",
+          "mode": "list",
+          "cachedResultName": "Nexora lab",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1x9EMBAlJlNs0MO0cY-wANP3X9wDuAErGzRG7zFSioRY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1x9EMBAlJlNs0MO0cY-wANP3X9wDuAErGzRG7zFSioRY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Phone Number": "={{ $json.phone }}",
+            "Booking Time": "={{ $json.startTime }}",
+            "Event ID": "={{ $json.eventId }}",
+            "Interested": "Yes"
+          },
+          "matchingColumns": [
+            "Phone Number"
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Requirements",
+              "displayName": "Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Interested",
+              "displayName": "Interested",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Booking Time",
+              "displayName": "Booking Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Event ID",
+              "displayName": "Event ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        9488,
+        3584
+      ],
+      "id": "f7e95813-98ed-4466-a6c7-efb1cd7957b5",
+      "name": "Update Sheet Booking",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "QT5DUMKZrjL3I1b0",
+          "name": "Google Sheets account"
+        }
+      }
     }
   ],
-  "pinData": {},
   "connections": {
     "Webhook GET": {
       "main": [
@@ -1513,45 +1749,49 @@
           }
         ]
       ]
+    },
+    "Calendar Event Created": {
+      "main": [
+        [
+          {
+            "node": "Parse Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Event": {
+      "main": [
+        [
+          {
+            "node": "Has Phone?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Phone?": {
+      "main": [
+        [
+          {
+            "node": "Sync to CRM",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update Sheet Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": true,
-  "settings": {
-    "executionOrder": "v1",
-    "binaryMode": "separate",
-    "availableInMCP": false
-  },
-  "versionId": "94a1f1c9-74d9-416e-98ef-452984d53f10",
+  "pinData": {},
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5ca03925808e9c969f3c8e95dc50317e3bd5556ce532ef2228e477dbc0f2a571"
-  },
-  "nodeGroups": [],
-  "id": "GpCf2241sRp6zGqb",
-  "tags": [
-    {
-      "updatedAt": "2026-07-06T21:27:58.808Z",
-      "createdAt": "2026-07-06T21:27:58.808Z",
-      "id": "wvDaOh4P8mtbyMlv",
-      "name": "AI Agent"
-    },
-    {
-      "updatedAt": "2026-07-06T21:27:58.829Z",
-      "createdAt": "2026-07-06T21:27:58.829Z",
-      "id": "dVNb3yJXG57I0mTn",
-      "name": "Production"
-    },
-    {
-      "updatedAt": "2026-07-06T21:27:58.844Z",
-      "createdAt": "2026-07-06T21:27:58.844Z",
-      "id": "bnDUInhpZt5zkWxn",
-      "name": "CRM"
-    },
-    {
-      "updatedAt": "2026-07-06T21:27:58.849Z",
-      "createdAt": "2026-07-06T21:27:58.849Z",
-      "id": "mMSQuqOajSAClJvS",
-      "name": "WhatsApp"
-    }
-  ]
+  }
 }

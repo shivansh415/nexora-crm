@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
             : "This contact hasn't messaged you yet, so WhatsApp won't deliver a normal message. Use New chat to send the approved template first — free replies unlock once they reply.",
           code: 'WINDOW_CLOSED',
           windowClosed: true,
+          canReengage: true,
         },
         { status: 409 }
       )

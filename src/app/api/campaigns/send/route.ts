@@ -3,6 +3,13 @@ import { createClient } from '@supabase/supabase-js'
 import { normalizePhone } from '@/lib/phone'
 import { sendOutreachTemplate, renderOutreachPreview } from '@/lib/whatsapp'
 
+// Run on the Node.js runtime and allow up to 5 minutes so a full batch (≤250)
+// completes without a serverless timeout. Each send also retries with backoff
+// inside the WhatsApp client, so transient Meta 429/5xx no longer drop recipients.
+// NOTE: maxDuration=300 requires a Vercel Pro/Fluid plan; Hobby caps lower.
+export const runtime = 'nodejs'
+export const maxDuration = 300
+
 const WORKSPACE_ID = 'f38c0ad0-d4ef-4090-94eb-50d3f6a21bce'
 
 // Delay between sends to stay well under Meta's per-second throughput limits.

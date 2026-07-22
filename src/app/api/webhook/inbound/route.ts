@@ -52,6 +52,21 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabase()
 
+    // ── 0. Idempotency guard ──
+    // Meta re-delivers webhooks and n8n may run this branch more than once for the
+    // same message. If we've already stored this wa_message_id, stop here so we
+    // don't double-count unread, duplicate leads/enquiries, or re-run side effects.
+    if (messageId) {
+      const { data: dup } = await supabase
+        .from('messages')
+        .select('id')
+        .eq('wa_message_id', messageId)
+        .limit(1)
+      if (dup && dup.length > 0) {
+        return NextResponse.json({ success: true, duplicate: true })
+      }
+    }
+
     // ── 1. Upsert Contact ──
     let contactId: string
     let isNewContact = false
@@ -178,6 +193,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (msgErr) {
+      // 23505 = unique_violation on wa_message_id → a concurrent duplicate delivery
+      // already inserted this exact message. Treat as success (idempotent).
+      if ((msgErr as { code?: string }).code === '23505') {
+        return NextResponse.json({ success: true, duplicate: true })
+      }
       return NextResponse.json({ error: 'Failed to save message', details: msgErr?.message }, { status: 500 })
     }
 

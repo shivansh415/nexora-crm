@@ -15,7 +15,13 @@ interface AiReplyPayload {
   phone: string
   replyText: string
   messageId?: string
+  // Optional: n8n reports whether Meta actually accepted the send. Defaults to
+  // 'sent' for backward compatibility. When 'failed', we log it as failed so the
+  // agent sees the AI reply never went out (instead of a false "sent").
+  status?: 'sent' | 'failed' | 'delivered'
 }
+
+const ALLOWED_STATUS = new Set(['sent', 'failed', 'delivered'])
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,6 +32,7 @@ export async function POST(request: NextRequest) {
 
     const body: AiReplyPayload = await request.json()
     const { phone, replyText, messageId } = body
+    const status = ALLOWED_STATUS.has(String(body.status)) ? body.status! : 'sent'
 
     if (!phone || !replyText) {
       return NextResponse.json({ error: 'Missing phone or replyText' }, { status: 400 })
@@ -70,7 +77,7 @@ export async function POST(request: NextRequest) {
         sender_type: 'ai',
         message_type: 'text',
         content: replyText,
-        status: 'sent',
+        status,
         is_ai_generated: true,
         timestamp: new Date().toISOString(),
       })
@@ -78,20 +85,26 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (msgErr) {
+      // Idempotent: a duplicate delivery already logged this reply.
+      if ((msgErr as { code?: string }).code === '23505') {
+        return NextResponse.json({ success: true, duplicate: true })
+      }
       return NextResponse.json({ error: 'Failed to save AI reply', details: msgErr?.message }, { status: 500 })
     }
 
-    // ── 4. Update conversation preview ──
-    await supabase
-      .from('conversations')
-      .update({
-        last_message_at: new Date().toISOString(),
-        last_message_preview: replyText.slice(0, 100),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', conversationId)
+    // ── 4. Update conversation preview (skip when the send failed) ──
+    if (status !== 'failed') {
+      await supabase
+        .from('conversations')
+        .update({
+          last_message_at: new Date().toISOString(),
+          last_message_preview: replyText.slice(0, 100),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', conversationId)
+    }
 
-    return NextResponse.json({ success: true, messageId: msg?.id })
+    return NextResponse.json({ success: true, messageId: msg?.id, status })
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : String(err)
     console.error('AI reply webhook error:', errorMessage)
