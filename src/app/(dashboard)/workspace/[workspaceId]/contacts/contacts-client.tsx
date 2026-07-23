@@ -256,7 +256,7 @@ export default function ContactsClient({ initial, workspaceId }: { initial: Cont
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="c-phone">Phone number</Label>
-              <Input id="c-phone" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="+91 98765 43210" onKeyDown={(e) => { if (e.key === 'Enter') handleAdd() }} />
+              <Input id="c-phone" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} inputMode="tel" placeholder="+92 300 1234567 (any country)" onKeyDown={(e) => { if (e.key === 'Enter') handleAdd() }} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="c-email">Email <span className="text-zinc-400 font-normal">(optional)</span></Label>

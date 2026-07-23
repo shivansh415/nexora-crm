@@ -1464,7 +1464,7 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
               <Input
                 id="new-phone"
                 inputMode="tel"
-                placeholder="+91 98765 43210"
+                placeholder="+92 300 1234567"
                 value={newPhone}
                 onChange={(e) => setNewPhone(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleStartChat() }}
@@ -1473,7 +1473,7 @@ export default function ChatView({ workspaceId, initialConversationId }: ChatVie
             </div>
           </div>
           <p className="-mt-1.5 text-[11.5px] text-zinc-400">
-            With or without +91 — Indian numbers are auto-formatted.
+            Any country — include the country code (e.g. +92, +971, +44). Bare 10-digit numbers default to India (+91).
           </p>
 
           {/* Message preview */}
